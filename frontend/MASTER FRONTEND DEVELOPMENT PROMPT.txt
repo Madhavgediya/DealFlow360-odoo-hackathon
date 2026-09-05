@@ -1,0 +1,2705 @@
+MASTER FRONTEND DEVELOPMENT PROMPT
+==================================
+
+PROJECT: DealFlow360
+TYPE: Enterprise Deal Operating System / ERP
+FRONTEND: React + TypeScript
+BACKEND: Node.js + Express + PostgreSQL
+AI SERVICE: Python FastAPI
+UI: Modern Enterprise ERP / Odoo-inspired, but with completely original branding and UI
+ARCHITECTURE: Modular + scalable + API-driven + permission-aware
+PRIMARY GOAL: Build a production-ready frontend that can dynamically consume APIs and scale from hackathon MVP to enterprise application.
+
+==================================================
+1. CORE PRODUCT VISION
+==================================================
+
+Build "DealFlow360" as an intelligent Deal Operating System.
+
+The complete business flow is:
+
+Lead Generation
+→ CRM Lead
+→ Lead Qualification
+→ Operator Contact
+→ Customer Conversion
+→ 7-Day Trial Subscription
+→ Customer Portal
+→ Product Selection
+→ Quote Generation
+→ Product/Category Pricing
+→ Discount Negotiation
+→ Risk Calculation
+→ Team Review
+→ Dynamic Approval
+→ Customer Negotiation
+→ Re-approval if required
+→ Quote Confirmation
+→ Inventory Check
+→ Warehouse Allocation
+→ Vendor Selection if stock is insufficient
+→ Purchase Order
+→ Fulfillment
+→ Shiprocket Shipping
+→ Invoice
+→ Payment
+→ Subscription Billing
+→ Deal Health
+→ Analytics
+→ AI/RAG Assistant
+
+The frontend must represent this entire lifecycle.
+
+DO NOT create a collection of disconnected pages.
+
+The frontend must feel like ONE integrated enterprise application.
+
+==================================================
+2. IMPORTANT DEVELOPMENT PRINCIPLES
+==================================================
+
+DO NOT build static mockup pages.
+
+DO NOT hardcode business logic into UI.
+
+DO NOT hardcode approval results.
+
+DO NOT hardcode discount limits.
+
+DO NOT hardcode risk scores.
+
+DO NOT hardcode inventory.
+
+DO NOT hardcode vendor recommendations.
+
+DO NOT hardcode dashboard numbers.
+
+DO NOT store business data permanently in frontend localStorage.
+
+All business data must come from APIs.
+
+The frontend should work with realistic API responses and loading/error/empty states.
+
+Use mock API adapters only when backend APIs are not yet available.
+
+Every mock must be replaceable with a real API without rewriting the UI.
+
+==================================================
+3. FRONTEND TECHNOLOGY STACK
+==================================================
+
+Use:
+
+React
+TypeScript
+Vite
+
+React Router
+TanStack Query
+Zustand
+React Hook Form
+Zod
+
+Axios
+
+Tailwind CSS
+shadcn/ui
+
+Recharts
+
+Lucide React icons
+
+date-fns
+
+Sonner/toast notifications
+
+Optional:
+Framer Motion for subtle animations
+
+Do NOT overuse animations.
+
+The UI must remain fast and professional.
+
+==================================================
+4. FRONTEND ARCHITECTURE
+==================================================
+
+Use a feature/module-based architecture.
+
+Recommended structure:
+
+src/
+
+  app/
+    App.tsx
+    router.tsx
+    providers/
+      QueryProvider.tsx
+      AuthProvider.tsx
+      ThemeProvider.tsx
+
+  layouts/
+    MainLayout.tsx
+    PortalLayout.tsx
+    AuthLayout.tsx
+
+  components/
+    ui/
+    common/
+    data-table/
+    forms/
+    charts/
+    dialogs/
+    drawers/
+    command-menu/
+    status/
+    empty-state/
+    loading/
+    errors/
+
+  modules/
+
+    auth/
+    dashboard/
+    crm/
+    customers/
+    products/
+    pricing/
+    quotes/
+    approvals/
+    negotiations/
+    inventory/
+    vendors/
+    procurement/
+    fulfillment/
+    shipping/
+    subscriptions/
+    billing/
+    deal-health/
+    analytics/
+    notifications/
+    ai/
+    settings/
+
+  pages/
+
+    auth/
+    dashboard/
+    crm/
+    customers/
+    products/
+    quotes/
+    approvals/
+    negotiations/
+    inventory/
+    vendors/
+    procurement/
+    fulfillment/
+    shipping/
+    subscriptions/
+    billing/
+    deal-health/
+    analytics/
+    ai/
+    settings/
+
+  services/
+    api/
+      client.ts
+      auth.api.ts
+      leads.api.ts
+      customers.api.ts
+      products.api.ts
+      pricing.api.ts
+      quotes.api.ts
+      approvals.api.ts
+      negotiations.api.ts
+      inventory.api.ts
+      vendors.api.ts
+      procurement.api.ts
+      fulfillment.api.ts
+      shipping.api.ts
+      subscriptions.api.ts
+      billing.api.ts
+      analytics.api.ts
+      ai.api.ts
+
+  hooks/
+    useAuth.ts
+    usePermissions.ts
+    useDebounce.ts
+    usePagination.ts
+    useFilters.ts
+
+  stores/
+    auth.store.ts
+    ui.store.ts
+    quote.store.ts
+    portal.store.ts
+
+  types/
+    auth.ts
+    crm.ts
+    customer.ts
+    product.ts
+    quote.ts
+    approval.ts
+    negotiation.ts
+    inventory.ts
+    vendor.ts
+    fulfillment.ts
+    billing.ts
+    subscription.ts
+    analytics.ts
+
+  schemas/
+    auth.schema.ts
+    lead.schema.ts
+    quote.schema.ts
+    negotiation.schema.ts
+    product.schema.ts
+
+  utils/
+    currency.ts
+    date.ts
+    permissions.ts
+    risk.ts
+    status.ts
+    formatting.ts
+
+  constants/
+    routes.ts
+    statuses.ts
+
+  config/
+    env.ts
+
+==================================================
+5. DESIGN SYSTEM
+==================================================
+
+Create a reusable enterprise design system.
+
+Visual direction:
+
+Modern
+Professional
+Premium
+Data-dense
+Clean
+Fast
+ERP-oriented
+
+Avoid:
+
+Generic SaaS landing page look
+Huge empty spaces
+Excessive gradients
+Excessive glassmorphism
+Unnecessary animations
+Toy-like cards
+Overly rounded UI everywhere
+
+Use:
+
+Compact navigation
+Dense but readable tables
+Clear hierarchy
+Status badges
+Risk indicators
+Approval indicators
+Timeline components
+Side panels
+Drawers
+Command palette
+Data filters
+Charts
+Responsive forms
+
+Primary application experience:
+
+Desktop-first ERP.
+
+Must still work properly on tablet and mobile.
+
+==================================================
+6. GLOBAL APPLICATION LAYOUT
+==================================================
+
+Create:
+
+--------------------------------------------------
+TOP HEADER
+--------------------------------------------------
+
+Left:
+
+DealFlow360 logo
+
+Global search / Command-K
+
+Center/right:
+
+Company selector
+Currency selector
+Notifications
+AI Assistant
+User profile
+
+--------------------------------------------------
+LEFT SIDEBAR
+--------------------------------------------------
+
+Dashboard
+
+CRM
+  Leads
+  Lead Pipeline
+  Activities
+
+Customers
+
+Products
+  Products
+  Categories
+  Price Lists
+
+Sales
+  Quotes
+  Quote Pipeline
+  Negotiations
+  Approvals
+
+Inventory
+  Warehouses
+  Stock
+  Reservations
+
+Vendors
+  Vendors
+  Vendor Products
+  Vendor Performance
+
+Procurement
+  Purchase Orders
+
+Fulfillment
+  Fulfillment Plans
+  Shipments
+
+Subscriptions
+  Plans
+  Subscriptions
+  Billing
+
+Finance
+  Invoices
+  Payments
+
+Deal Health
+
+Analytics
+
+AI Assistant
+
+Settings
+
+Sidebar must support:
+
+collapsed state
+expanded state
+permission-based visibility
+active route
+badges/counts
+
+Example:
+
+Approvals (4)
+Negotiations (2)
+Alerts (7)
+
+==================================================
+7. AUTHENTICATION
+==================================================
+
+Build:
+
+Login
+Forgot Password
+Reset Password
+Session expiration
+Logout
+Unauthorized page
+Forbidden page
+
+Authentication must support:
+
+JWT access token
+refresh token
+role
+permissions
+company
+
+Frontend must NEVER assume the user is an admin.
+
+Load:
+
+GET /api/v1/auth/me
+
+Store:
+
+user
+company
+roles
+permissions
+
+Create:
+
+useAuth()
+usePermission()
+can()
+hasRole()
+
+Example:
+
+can("quote.approve")
+
+can("vendor.view")
+
+can("discount.override")
+
+can("customer.negotiate")
+
+UI must hide actions when permission is unavailable.
+
+Backend remains the final authority.
+
+==================================================
+8. DASHBOARD
+==================================================
+
+Create an intelligent executive dashboard.
+
+Top KPI cards:
+
+Total Pipeline
+Active Deals
+Quotes Awaiting Approval
+Negotiations
+Expected Revenue
+Gross Margin
+At-Risk Deals
+Pending Fulfillment
+
+Each KPI must support:
+
+loading
+error
+empty
+click-to-drill-down
+
+Charts:
+
+Pipeline by Stage
+Revenue Trend
+Gross Margin Trend
+Discount Distribution
+Approval Aging
+Deal Health
+Warehouse Fulfillment
+Vendor Performance
+
+Right panel:
+
+"Needs Attention"
+
+Examples:
+
+Quote exceeds category discount limit
+Approval pending for 18 hours
+Warehouse stock insufficient
+Vendor delivery risk
+Customer negotiation requires reapproval
+Deal stalled for 5 days
+
+Clicking an alert navigates to the exact record.
+
+==================================================
+9. CRM MODULE
+==================================================
+
+Pages:
+
+/crm/leads
+/crm/leads/:id
+/crm/pipeline
+/crm/activities
+
+Lead list:
+
+Search
+Filters
+Sort
+Pagination
+Bulk actions
+
+Columns:
+
+Lead
+Company
+Contact
+Source
+Assigned To
+Score
+Stage
+Trial
+Last Activity
+Next Follow-up
+Created
+
+Lead detail must contain:
+
+Header
+Lead score
+Contact information
+Company information
+Requirement
+Timeline
+Interactions
+Notes
+Activities
+Qualification
+Trial status
+
+Actions:
+
+Contact
+Email
+Call
+Message
+Assign
+Qualify
+Convert
+
+==================================================
+10. LEAD → CUSTOMER → TRIAL
+==================================================
+
+When lead qualifies:
+
+Show conversion wizard.
+
+Steps:
+
+Lead Information
+→ Customer Creation
+→ Trial Setup
+→ Portal Access
+→ Confirmation
+
+Trial:
+
+7-day trial
+
+Display:
+
+Trial start
+Trial end
+Days remaining
+Status
+
+Customer portal access must be separate from internal ERP UI.
+
+==================================================
+11. CUSTOMER MODULE
+==================================================
+
+Customer list.
+
+Customer detail:
+
+Overview
+Contacts
+Quotes
+Orders
+Negotiations
+Subscriptions
+Invoices
+Payments
+Activity
+Deal Health
+
+Show:
+
+Customer tier
+Price list
+Currency
+Payment terms
+Credit limit
+
+Never expose:
+
+vendor purchase price
+internal margin
+internal approval comments
+internal risk configuration
+
+==================================================
+12. PRODUCT MODULE
+==================================================
+
+Product list:
+
+Search
+Category filter
+Type filter
+Active filter
+Price range
+
+Product detail:
+
+General
+Pricing
+Variants
+Categories
+Taxes
+Inventory
+Vendors
+Subscriptions
+Upsell Rules
+
+Display:
+
+SKU
+Selling Price
+Cost
+Margin
+Stock
+Available Vendors
+
+Permission-aware cost visibility.
+
+==================================================
+13. QUOTE MODULE
+==================================================
+
+This is the MOST IMPORTANT FRONTEND MODULE.
+
+Build a professional quotation workspace.
+
+Route:
+
+/sales/quotes
+
+Views:
+
+Table
+Kanban
+Pipeline
+
+Quote builder:
+
+--------------------------------------------------
+QUOTE HEADER
+--------------------------------------------------
+
+Customer
+Salesperson
+Currency
+Price List
+Valid Until
+Payment Terms
+
+--------------------------------------------------
+PRODUCT LINES
+--------------------------------------------------
+
+Product
+Variant
+Quantity
+Unit Price
+Discount
+Tax
+Subtotal
+Recurring
+Subscription Plan
+Warehouse
+
+Actions:
+
+Add Product
+Remove
+Duplicate
+Edit
+
+--------------------------------------------------
+PRICING SUMMARY
+--------------------------------------------------
+
+Subtotal
+Discount
+Tax
+Total
+
+Cost
+Gross Margin
+Margin %
+
+--------------------------------------------------
+RISK PANEL
+--------------------------------------------------
+
+Risk Score
+
+Risk Level
+
+Discount Risk
+Margin Risk
+Fulfillment Risk
+Vendor Risk
+Negotiation Risk
+Aggregate Risk
+
+Each risk must have:
+
+score
+severity
+reason
+
+Example:
+
+Discount Risk: HIGH
+
+Reason:
+Requested discount 18%
+Allowed category limit 10%
+Excess: 8%
+
+--------------------------------------------------
+APPROVAL PANEL
+--------------------------------------------------
+
+Approval Required
+
+Current Step
+
+Pending Approver
+
+Approval History
+
+"Why am I seeing this approval?"
+
+Show explainable reasons.
+
+--------------------------------------------------
+DEAL HEALTH
+--------------------------------------------------
+
+Delivery Risk
+Stalled Time
+Customer Engagement
+Vendor Risk
+Margin Risk
+
+==================================================
+14. QUOTE BUILDER UX
+==================================================
+
+Use a split layout.
+
+LEFT:
+
+Quote information + line items.
+
+RIGHT:
+
+Sticky summary panel.
+
+Right panel:
+
+Subtotal
+Discount
+Tax
+Total
+Margin
+Risk
+Approval
+Deal Health
+
+Bottom actions:
+
+Save Draft
+Submit Review
+Request Approval
+Send to Customer
+Open Negotiation
+Confirm
+
+Actions must depend on quote state and permissions.
+
+==================================================
+15. DISCOUNT UI
+==================================================
+
+Discount must be dynamic.
+
+Never assume:
+
+"maximum discount = 15%"
+
+Fetch policy from API.
+
+Show:
+
+Allowed Discount
+Requested Discount
+Excess
+Risk
+Approval Required
+
+Visual state:
+
+Within limit
+Near limit
+Exceeds limit
+
+If discount exceeds threshold:
+
+Show warning.
+
+Example:
+
+Requested: 18%
+
+Allowed: 10%
+
+Excess: +8%
+
+Approval Required:
+Sales Manager
+Finance
+
+==================================================
+16. RISK EXPLAINABILITY
+==================================================
+
+Create reusable:
+
+<RiskBadge />
+<RiskScore />
+<RiskBreakdown />
+<RiskReasonList />
+
+Risk panel should answer:
+
+WHY is this risky?
+
+Show:
+
+Rule
+Actual value
+Allowed value
+Difference
+Impact
+
+Example:
+
+Margin Risk
+
+Current Margin: 12.4%
+Minimum Required: 18%
+Gap: -5.6%
+
+This is a HERO feature.
+
+==================================================
+17. APPROVAL MODULE
+==================================================
+
+Pages:
+
+/approvals
+/approvals/:id
+
+Approval inbox:
+
+Pending
+Approved
+Rejected
+Escalated
+
+Each approval:
+
+Quote
+Customer
+Amount
+Discount
+Risk Score
+Risk Level
+Requested By
+Age
+Current Step
+
+Approval detail:
+
+Quote summary
+Risk breakdown
+Margin impact
+Discount policy
+Approval chain
+Audit timeline
+
+Actions:
+
+Approve
+Reject
+Request Changes
+
+Reject must require reason.
+
+Approve can optionally require comment depending on backend configuration.
+
+==================================================
+18. NEGOTIATION MODULE
+==================================================
+
+This should look premium.
+
+Route:
+
+/sales/negotiations/:quoteId
+
+Show:
+
+Original Quote
+Current Quote
+Customer Request
+Proposed Changes
+Risk Before
+Risk After
+Approval Status
+
+Use side-by-side diff.
+
+Example:
+
+Product:
+Laptop Pro
+
+Quantity:
+10 → 15
+
+Discount:
+10% → 18%
+
+Margin:
+22% → 15%
+
+Risk:
+Medium → High
+
+Show:
+
+"Reapproval Required"
+
+Negotiation timeline:
+
+Round 1
+Customer requested 12%
+Sales proposed 10%
+Approved
+
+Round 2
+Customer requested 18%
+Risk increased
+Reapproval triggered
+
+==================================================
+19. QUOTE REVISION SYSTEM
+==================================================
+
+Every negotiation change should produce a revision.
+
+UI:
+
+Revision 1
+Revision 2
+Revision 3
+
+Allow user to inspect:
+
+Changed fields
+Old value
+New value
+Changed by
+Changed at
+Risk difference
+Margin difference
+
+Do NOT overwrite historical revisions visually.
+
+==================================================
+20. INVENTORY MODULE
+==================================================
+
+Pages:
+
+/inventory/warehouses
+/inventory/stock
+/inventory/reservations
+
+Warehouse dashboard:
+
+Warehouse
+Available
+Reserved
+Incoming
+Required
+Shortage
+
+Quote fulfillment view:
+
+Required quantity
+Warehouse available
+Allocated
+Shortage
+
+Allow:
+
+Auto Allocate
+Manual Allocation
+
+==================================================
+21. VENDOR MODULE
+==================================================
+
+Pages:
+
+/vendors
+/vendors/:id
+/vendors/performance
+
+Vendor list:
+
+Vendor
+Categories
+Lead Time
+Availability
+Quality
+Reliability
+Score
+Status
+
+Vendor comparison UI:
+
+Vendor A
+Price
+Lead Time
+Availability
+Quality
+Reliability
+Score
+
+Vendor B
+...
+
+Highlight recommended vendor.
+
+Example:
+
+Recommended:
+Vendor B
+
+Reason:
+
+Better lead time
+Higher availability
+Lower total supply risk
+
+Never show vendor cost to customer portal.
+
+==================================================
+22. PROCUREMENT MODULE
+==================================================
+
+Purchase order list.
+
+PO detail:
+
+Vendor
+Products
+Quantity
+Expected Delivery
+Status
+Linked Quote
+Warehouse
+
+Timeline:
+
+PO Created
+Vendor Confirmed
+Dispatched
+Received
+
+==================================================
+23. FULFILLMENT MODULE
+==================================================
+
+Fulfillment planning screen:
+
+Quote
+
+Required Products
+
+Warehouse Allocation
+
+Vendor Allocation
+
+Shortage
+
+Expected Delivery
+
+Delivery Risk
+
+Example:
+
+Product A
+Warehouse Surat: 5
+Warehouse Rajkot: 3
+Required: 10
+Vendor: 2
+
+Show visual allocation.
+
+==================================================
+24. SHIPPING MODULE
+==================================================
+
+Shipments page.
+
+Show:
+
+Shipment ID
+Quote
+Customer
+Provider
+Tracking Number
+Carrier
+Status
+Expected Delivery
+
+Timeline:
+
+Order Confirmed
+Packed
+Pickup
+In Transit
+Out for Delivery
+Delivered
+
+Prepare frontend for Shiprocket integration.
+
+Do not tightly couple the UI to Shiprocket.
+
+Use generic shipping provider abstraction.
+
+==================================================
+25. SUBSCRIPTION MODULE
+==================================================
+
+Pages:
+
+/subscriptions/plans
+/subscriptions
+/subscriptions/:id
+
+Plan list:
+
+Name
+Price
+Billing Cycle
+Trial
+Features
+Status
+
+Subscription detail:
+
+Customer
+Plan
+Start
+Renewal
+Status
+Lines
+Billing Schedule
+Proration
+
+Support:
+
+Upgrade
+Downgrade
+Cancel
+Pause if backend supports it
+
+Show proration preview.
+
+==================================================
+26. BILLING MODULE
+==================================================
+
+Pages:
+
+/billing/invoices
+/billing/payments
+
+Invoice detail:
+
+Customer
+Quote
+Subscription
+Lines
+Tax
+Total
+Due Date
+Status
+
+Payment timeline.
+
+Statuses:
+
+Draft
+Issued
+Partially Paid
+Paid
+Overdue
+Cancelled
+
+==================================================
+27. DEAL HEALTH
+==================================================
+
+Create a dedicated Deal Health workspace.
+
+Route:
+
+/deal-health
+
+Cards:
+
+Healthy
+Watch
+At Risk
+Critical
+
+Deal health table:
+
+Deal
+Customer
+Stage
+Risk
+Margin
+Delivery
+Vendor
+Last Activity
+Days Stalled
+
+Alerts:
+
+Discount anomaly
+Margin drop
+Approval delay
+Delivery slippage
+Vendor risk
+Customer inactivity
+
+==================================================
+28. ANALYTICS
+==================================================
+
+Build filterable analytics.
+
+Global filters:
+
+Date
+Company
+Salesperson
+Customer
+Category
+Product
+Warehouse
+Vendor
+Currency
+Stage
+
+Charts:
+
+Revenue
+Margin
+Discount
+Approval
+Conversion
+Negotiation
+Fulfillment
+Vendor
+Subscription
+
+Use API-driven chart data.
+
+No fake random charts.
+
+==================================================
+29. AI ASSISTANT
+==================================================
+
+Build a persistent AI assistant.
+
+Desktop:
+
+Right-side drawer.
+
+Mobile:
+
+Bottom sheet.
+
+Capabilities:
+
+"What is the status of quote Q-1024?"
+
+"Why is this quote blocked?"
+
+"Which vendor should we use?"
+
+"Which deals are at risk?"
+
+"Suggest upsell products."
+
+"Why is approval required?"
+
+"What changed in the latest negotiation?"
+
+"Show customers with stalled deals."
+
+AI response must support:
+
+answer
+source
+data used
+confidence
+actions
+
+Example:
+
+AI:
+
+"This quote requires approval because the requested discount exceeds the category limit by 8 percentage points and reduces margin below the configured threshold."
+
+Sources:
+
+Discount Policy
+Quote Risk
+Quote Revision
+
+Actions:
+
+View Quote
+View Risk
+View Approval
+
+==================================================
+30. CUSTOMER PORTAL
+==================================================
+
+IMPORTANT:
+
+Customer portal must be visually and logically separate from internal ERP.
+
+Route:
+
+/portal
+
+Portal layout:
+
+Logo
+Customer name
+Notifications
+Profile
+Logout
+
+Pages:
+
+/portal/dashboard
+/portal/products
+/portal/quotes
+/portal/quotes/:id
+/portal/negotiations
+/portal/orders
+/portal/invoices
+/portal/subscriptions
+
+Customer can:
+
+Browse allowed products
+Select products
+Create/request quote
+View quotation
+Request negotiation
+Change quantity
+Request discount
+Accept quote
+Reject quote
+View order
+Track shipment
+View invoices
+View subscription
+
+Customer MUST NOT see:
+
+Internal risk score
+Internal margin
+Vendor cost
+Internal approval comments
+Internal audit logs
+
+==================================================
+31. PORTAL QUOTE EXPERIENCE
+==================================================
+
+Create premium customer-facing quote.
+
+Show:
+
+Products
+Quantity
+Price
+Discount
+Tax
+Total
+
+Button:
+
+Request Changes
+
+Negotiation form:
+
+Requested Discount
+Quantity Change
+Product Change
+Customer Message
+
+After submission:
+
+"Your requested changes have been sent for review."
+
+If approval is required:
+
+"Your updated quotation is under review."
+
+Never expose internal rules.
+
+==================================================
+32. NOTIFICATION CENTER
+==================================================
+
+Create notification dropdown.
+
+Types:
+
+Approval requested
+Approval approved
+Approval rejected
+Negotiation received
+Reapproval required
+Stock shortage
+Vendor delay
+Shipment update
+Payment received
+Subscription renewal
+Deal health alert
+
+Support:
+
+Unread count
+Mark read
+Mark all read
+Deep link
+
+==================================================
+33. GLOBAL SEARCH
+==================================================
+
+Implement command palette.
+
+Shortcut:
+
+CTRL/CMD + K
+
+Search:
+
+Customers
+Leads
+Quotes
+Products
+Vendors
+Purchase Orders
+Shipments
+Invoices
+Subscriptions
+
+Results grouped by entity.
+
+Keyboard navigation.
+
+==================================================
+34. DATA TABLE SYSTEM
+==================================================
+
+Build one reusable enterprise DataTable.
+
+Features:
+
+Sorting
+Filtering
+Pagination
+Column visibility
+Column resizing if practical
+Row selection
+Bulk actions
+Export
+Search
+Server-side pagination
+Server-side sorting
+Server-side filtering
+
+Do not duplicate table logic in every module.
+
+==================================================
+35. FORM SYSTEM
+==================================================
+
+Create reusable form components.
+
+Use:
+
+React Hook Form
+Zod
+
+Components:
+
+FormInput
+FormSelect
+FormCombobox
+FormCurrency
+FormPercentage
+FormDate
+FormDateRange
+FormTextarea
+FormProductSelector
+FormCustomerSelector
+FormVendorSelector
+
+Forms must show:
+
+loading
+validation
+server errors
+success
+dirty state
+
+==================================================
+36. STATUS SYSTEM
+==================================================
+
+Create centralized status configuration.
+
+Example:
+
+QuoteStatus:
+
+DRAFT
+TEAM_REVIEW
+RISK_CALCULATED
+APPROVAL_REQUIRED
+APPROVAL_IN_PROGRESS
+APPROVED
+CUSTOMER_NEGOTIATION
+REAPPROVAL_REQUIRED
+CONFIRMED
+FULFILLMENT
+SHIPPED
+DELIVERED
+BILLED
+PAID
+COMPLETED
+REJECTED
+CANCELLED
+
+Do NOT scatter string literals throughout components.
+
+==================================================
+37. STATE MANAGEMENT
+==================================================
+
+Use TanStack Query for:
+
+server state
+API data
+caching
+refetching
+mutations
+
+Use Zustand only for:
+
+UI state
+sidebar
+theme
+temporary quote builder state
+portal session state
+command palette
+
+Do NOT put all API data into Zustand.
+
+==================================================
+38. API LAYER
+==================================================
+
+Create centralized Axios client.
+
+Base:
+
+/api/v1
+
+Support:
+
+Authorization
+Refresh token
+Request ID
+Error normalization
+
+Create typed API methods.
+
+Example:
+
+quotesApi.getQuotes()
+quotesApi.getQuote(id)
+quotesApi.createQuote(data)
+quotesApi.updateQuote(id,data)
+quotesApi.submitForApproval(id)
+quotesApi.confirmQuote(id)
+
+Use React Query hooks:
+
+useQuotes()
+useQuote(id)
+useCreateQuote()
+useUpdateQuote()
+useSubmitQuoteForApproval()
+
+==================================================
+39. API RESPONSE STANDARD
+==================================================
+
+Frontend should expect a consistent backend format.
+
+Example:
+
+{
+  "success": true,
+  "data": {},
+  "meta": {},
+  "message": null,
+  "error": null
+}
+
+Pagination:
+
+{
+  "page": 1,
+  "pageSize": 20,
+  "total": 245,
+  "totalPages": 13
+}
+
+Build frontend adapters so API response changes do not affect every component.
+
+==================================================
+40. ERROR HANDLING
+==================================================
+
+Handle:
+
+400
+401
+403
+404
+409
+422
+429
+500
+network failure
+timeout
+
+Create:
+
+GlobalErrorBoundary
+
+Friendly error UI.
+
+For 409 business conflicts:
+
+Example:
+
+"This quote was modified by another user. Refresh to load the latest version."
+
+==================================================
+41. LOADING STATES
+==================================================
+
+Every API-driven page must support:
+
+Skeleton loading
+Empty state
+Error state
+Retry
+
+Never show blank screen.
+
+==================================================
+42. REAL-TIME READY
+==================================================
+
+Prepare architecture for WebSocket/SSE.
+
+Potential events:
+
+approval.updated
+negotiation.created
+quote.updated
+shipment.updated
+notification.created
+deal_health.updated
+
+Do not make WebSocket mandatory for initial MVP.
+
+Create abstraction:
+
+realtimeService.subscribe()
+
+==================================================
+43. AUDIT UI
+==================================================
+
+Create reusable AuditTimeline.
+
+Display:
+
+Who
+Role
+Action
+Time
+Reason
+Old value
+New value
+
+Example:
+
+Madhav
+Sales Manager
+
+Changed discount
+
+10% → 15%
+
+Reason:
+Customer negotiation
+
+==================================================
+44. RESPONSIVE BEHAVIOR
+==================================================
+
+Desktop:
+
+Sidebar + content + optional right panel.
+
+Tablet:
+
+Collapsible sidebar.
+
+Mobile:
+
+Bottom navigation for major modules.
+
+Tables:
+
+Horizontal scrolling or responsive card transformation.
+
+Quote builder:
+
+Desktop:
+2-column
+
+Mobile:
+Stacked sections
+
+AI:
+
+Desktop drawer
+Mobile bottom sheet
+
+==================================================
+45. ACCESSIBILITY
+==================================================
+
+Follow WCAG principles.
+
+Support:
+
+Keyboard navigation
+Focus states
+ARIA labels
+Semantic HTML
+Screen-reader-friendly dialogs
+Accessible tables
+Accessible forms
+
+Do not rely only on color to communicate risk.
+
+Example:
+
+HIGH
+⚠ icon
+text + badge
+
+==================================================
+46. PERFORMANCE
+==================================================
+
+Use:
+
+Route-based lazy loading
+
+React Query caching
+
+Debounced search
+
+Virtualized lists where required
+
+Memoization only where useful
+
+Image lazy loading
+
+Avoid unnecessary global rerenders.
+
+Target:
+
+Fast initial dashboard
+Fast quote builder
+Fast table navigation
+
+==================================================
+47. SECURITY
+==================================================
+
+Never trust frontend permission checks.
+
+Frontend permissions are UX only.
+
+Never expose:
+
+JWT secrets
+API secrets
+vendor internal data to portal
+internal margin to portal
+internal approval configuration to portal
+
+Avoid storing sensitive tokens in localStorage if backend architecture supports secure cookies.
+
+Sanitize rendered content.
+
+==================================================
+48. MULTI-COMPANY READY
+==================================================
+
+Every API query should be company-aware.
+
+Header:
+
+Company Selector
+
+Changing company should:
+
+invalidate relevant React Query caches
+reload dashboard
+reload permissions
+reload products
+reload customers
+reload quotes
+
+Do not mix data across companies.
+
+==================================================
+49. MULTI-CURRENCY READY
+==================================================
+
+UI must support:
+
+INR
+USD
+EUR
+GBP
+etc.
+
+Never hardcode ₹.
+
+Use:
+
+formatCurrency(amount, currency)
+
+Quote:
+
+₹ 125,000.00
+
+USD:
+
+$1,500.00
+
+Respect currency decimals.
+
+==================================================
+50. URL / FILTER STATE
+==================================================
+
+Important:
+
+Filters should be URL-driven wherever practical.
+
+Example:
+
+/sales/quotes?
+status=APPROVAL_REQUIRED
+risk=HIGH
+salesperson=123
+page=2
+
+This allows:
+
+shareable URLs
+browser back
+refresh persistence
+
+==================================================
+51. BREADCRUMBS
+==================================================
+
+Create reusable breadcrumbs.
+
+Example:
+
+Sales
+→ Quotes
+→ Q-1024
+→ Negotiation
+
+==================================================
+52. DRAWERS AND MODALS
+==================================================
+
+Prefer drawers for:
+
+Quick edit
+Risk explanation
+Approval details
+Customer preview
+Vendor comparison
+
+Use modal for:
+
+Delete
+Reject
+Cancel
+Confirm
+Destructive actions
+
+==================================================
+53. EMPTY STATES
+==================================================
+
+Every module needs meaningful empty states.
+
+Example:
+
+"No pending approvals"
+
+"All approval requests are currently cleared."
+
+Button:
+
+View Quotes
+
+==================================================
+54. DEMO / HACKATHON MODE
+==================================================
+
+Create a polished seeded-data experience.
+
+The UI must make this flow extremely easy to demonstrate:
+
+1. Open CRM
+2. Open lead
+3. Convert to customer
+4. Activate 7-day trial
+5. Open customer portal
+6. Customer selects products
+7. Generate quote
+8. Request high discount
+9. Quote risk increases
+10. Approval is triggered
+11. Manager approves
+12. Customer negotiates again
+13. Reapproval automatically appears
+14. Quote approved
+15. Inventory shortage detected
+16. Vendor recommendation appears
+17. Fulfillment plan created
+18. Shipment created
+19. Invoice generated
+20. Deal Health updated
+21. AI explains what happened
+
+This should be the HERO demo flow.
+
+==================================================
+55. DEMO DATA
+==================================================
+
+Create a frontend seed/mock adapter containing realistic records:
+
+Companies:
+2
+
+Users:
+Admin
+Sales Manager
+Salesperson
+Finance Manager
+Warehouse Manager
+Procurement Manager
+
+Customers:
+20+
+
+Leads:
+30+
+
+Products:
+50+
+
+Categories:
+10+
+
+Vendors:
+15+
+
+Warehouses:
+4
+
+Quotes:
+30+
+
+Negotiations:
+10+
+
+Approvals:
+10+
+
+Subscriptions:
+10+
+
+Invoices:
+20+
+
+Shipments:
+15+
+
+Deal Health alerts:
+20+
+
+BUT:
+
+Mock data must exist behind an API adapter.
+
+Components must not directly import fake JSON.
+
+==================================================
+56. FEATURE FLAGS
+==================================================
+
+Create:
+
+featureFlags.ts
+
+Example:
+
+ENABLE_AI
+ENABLE_SHIPROCKET
+ENABLE_VENDOR_SCORING
+ENABLE_SUBSCRIPTIONS
+ENABLE_NEGOTIATIONS
+ENABLE_PORTAL
+ENABLE_ANALYTICS
+
+UI should gracefully hide unavailable modules.
+
+==================================================
+57. ROUTING
+==================================================
+
+Create centralized protected routes.
+
+Example:
+
+/login
+
+/dashboard
+
+/crm/leads
+/crm/leads/:id
+
+/customers
+/customers/:id
+
+/products
+/products/:id
+
+/sales/quotes
+/sales/quotes/new
+/sales/quotes/:id
+
+/approvals
+/approvals/:id
+
+/negotiations
+/negotiations/:id
+
+/inventory
+/inventory/warehouses
+/inventory/stock
+
+/vendors
+/vendors/:id
+
+/procurement/purchase-orders
+/procurement/purchase-orders/:id
+
+/fulfillment
+/fulfillment/:id
+
+/shipping
+/shipping/:id
+
+/subscriptions
+/subscriptions/:id
+
+/billing/invoices
+/billing/invoices/:id
+
+/deal-health
+
+/analytics
+
+/ai
+
+/settings
+
+Portal:
+
+/portal
+/portal/products
+/portal/quotes
+/portal/quotes/:id
+/portal/orders
+/portal/invoices
+/portal/subscriptions
+
+==================================================
+58. COMPONENT REUSABILITY
+==================================================
+
+Build reusable components instead of page-specific implementations.
+
+Important components:
+
+AppShell
+Sidebar
+Topbar
+Breadcrumbs
+
+DataTable
+FilterBar
+SearchInput
+Pagination
+
+StatCard
+ChartCard
+MetricCard
+
+StatusBadge
+RiskBadge
+ApprovalBadge
+
+Timeline
+AuditTimeline
+ActivityTimeline
+
+QuoteLineTable
+QuoteSummary
+RiskPanel
+RiskBreakdown
+ApprovalPanel
+NegotiationDiff
+VendorComparison
+FulfillmentAllocation
+
+CustomerSelector
+ProductSelector
+VendorSelector
+
+ConfirmDialog
+RejectDialog
+ApprovalDialog
+
+AIChat
+AIMessage
+AISource
+AIAction
+
+==================================================
+59. FRONTEND DOMAIN TYPES
+==================================================
+
+Define strong TypeScript types.
+
+Example:
+
+type RiskLevel =
+  | "LOW"
+  | "MEDIUM"
+  | "HIGH"
+  | "CRITICAL";
+
+type QuoteStatus =
+  | "DRAFT"
+  | "TEAM_REVIEW"
+  | "RISK_CALCULATED"
+  | "APPROVAL_REQUIRED"
+  | "APPROVAL_IN_PROGRESS"
+  | "APPROVED"
+  | "CUSTOMER_NEGOTIATION"
+  | "REAPPROVAL_REQUIRED"
+  | "CONFIRMED"
+  | "FULFILLMENT"
+  | "SHIPPED"
+  | "DELIVERED"
+  | "BILLED"
+  | "PAID"
+  | "COMPLETED"
+  | "REJECTED"
+  | "CANCELLED";
+
+Do this for every domain.
+
+==================================================
+60. TESTING
+==================================================
+
+Use:
+
+Vitest
+React Testing Library
+
+Test:
+
+Quote builder
+Discount display
+Risk panel
+Approval actions
+Negotiation diff
+Permission checks
+Portal restrictions
+Form validation
+API error handling
+
+Critical flow test:
+
+Create Quote
+→ Calculate Risk
+→ Approval
+→ Negotiation
+→ Reapproval
+→ Confirm
+
+==================================================
+61. VISUAL QUALITY REQUIREMENT
+==================================================
+
+The application should feel like a serious enterprise product.
+
+Reference inspiration:
+
+Odoo ERP
+Salesforce
+HubSpot
+Linear
+Stripe Dashboard
+SAP Fiori
+
+BUT:
+
+DO NOT copy their branding,
+logos,
+colors,
+exact layouts,
+or copyrighted assets.
+
+Create an original DealFlow360 identity.
+
+==================================================
+62. RESPONSIVE DESIGN RULE
+==================================================
+
+Every page must be tested at:
+
+1440px
+1280px
+1024px
+768px
+390px
+
+No horizontal page overflow.
+
+Tables may horizontally scroll inside their own container.
+
+==================================================
+63. DEVELOPMENT RULE
+==================================================
+
+Before creating a new component:
+
+Check whether an existing reusable component can be extended.
+
+Before creating a new API function:
+
+Check existing API service.
+
+Before creating a new type:
+
+Check existing domain type.
+
+Avoid duplicate logic.
+
+Keep business logic outside UI components.
+
+Use:
+
+services
+hooks
+utils
+domain adapters
+
+instead of giant React components.
+
+==================================================
+64. BUSINESS LOGIC BOUNDARY
+==================================================
+
+Frontend may calculate presentation-only values.
+
+Example:
+
+formatting
+sorting UI
+display labels
+
+Frontend must NOT independently decide:
+
+discount approval
+risk approval
+vendor selection
+final pricing
+margin approval
+quote confirmation eligibility
+
+Those come from backend.
+
+Frontend displays backend decisions.
+
+==================================================
+65. VERSION CONFLICT HANDLING
+==================================================
+
+Important for enterprise scalability.
+
+Quotes and negotiations may contain:
+
+version
+updated_at
+
+If API returns conflict:
+
+Show:
+
+"This record has changed."
+
+Buttons:
+
+Reload Latest
+Compare Changes
+
+==================================================
+66. AUDITABLE ACTIONS
+==================================================
+
+For every important mutation show success confirmation.
+
+Examples:
+
+"Quote submitted for approval."
+
+"Approval approved."
+
+"Negotiation submitted."
+
+"Reapproval triggered."
+
+"Fulfillment plan created."
+
+"Vendor selected."
+
+"Shipment created."
+
+==================================================
+67. UX FOR BUSINESS RULES
+==================================================
+
+Never simply disable a button without explanation.
+
+Instead:
+
+Disabled button + tooltip
+
+Example:
+
+Approve disabled.
+
+Tooltip:
+
+"You do not have permission to approve this quote."
+
+Another:
+
+Confirm disabled.
+
+Reason:
+
+"Approval is still pending."
+
+==================================================
+68. FINAL FRONTEND EXPERIENCE
+==================================================
+
+The final application should feel like:
+
+CRM + ERP + Sales Workspace + Pricing Engine UI
++ Approval System + Negotiation Workspace
++ Inventory + Vendor Intelligence
++ Fulfillment + Shipping + Billing
++ Subscription Management + Deal Health + AI
+
+Everything should connect around the QUOTE / DEAL.
+
+Core navigation relationship:
+
+Lead
+ ↓
+Customer
+ ↓
+Quote
+ ↓
+Pricing
+ ↓
+Discount
+ ↓
+Risk
+ ↓
+Approval
+ ↓
+Negotiation
+ ↓
+Reapproval
+ ↓
+Confirmation
+ ↓
+Inventory
+ ↓
+Vendor
+ ↓
+Procurement
+ ↓
+Fulfillment
+ ↓
+Shipping
+ ↓
+Billing
+ ↓
+Subscription
+ ↓
+Deal Health
+ ↓
+Analytics
+ ↓
+AI
+
+==================================================
+69. IMPLEMENTATION ORDER
+==================================================
+
+Build in this order:
+
+PHASE 1
+Application shell
+Authentication
+Routing
+Permissions
+Design system
+API client
+
+PHASE 2
+Dashboard
+CRM
+Customers
+Products
+
+PHASE 3
+Quote list
+Quote builder
+Pricing
+Discount
+Risk
+
+PHASE 4
+Approval workspace
+Approval details
+Audit timeline
+
+PHASE 5
+Negotiation
+Quote revisions
+Reapproval
+
+PHASE 6
+Inventory
+Warehouses
+Vendor comparison
+Procurement
+
+PHASE 7
+Fulfillment
+Shipping
+Shiprocket-ready UI
+
+PHASE 8
+Subscriptions
+Billing
+Invoices
+Payments
+
+PHASE 9
+Deal Health
+Analytics
+
+PHASE 10
+Customer Portal
+
+PHASE 11
+AI Assistant + RAG UI
+
+PHASE 12
+Performance
+Accessibility
+Testing
+Polish
+
+==================================================
+70. FINAL ACCEPTANCE CRITERIA
+==================================================
+
+The frontend is considered complete only when:
+
+✓ No major static pages
+✓ All modules use reusable components
+✓ All business data is API-driven
+✓ React Query handles server state
+✓ Zustand handles UI state
+✓ Strong TypeScript types
+✓ Zod validation
+✓ Permission-aware UI
+✓ Dynamic approval UI
+✓ Dynamic risk UI
+✓ Dynamic discount UI
+✓ Quote revision UI
+✓ Negotiation diff UI
+✓ Inventory allocation UI
+✓ Vendor recommendation UI
+✓ Fulfillment UI
+✓ Shipping UI
+✓ Billing UI
+✓ Subscription UI
+✓ Deal Health UI
+✓ Analytics UI
+✓ AI Assistant UI
+✓ Separate customer portal
+✓ Responsive design
+✓ Loading states
+✓ Empty states
+✓ Error states
+✓ Toast feedback
+✓ Audit timeline
+✓ URL-based filters
+✓ Multi-company ready
+✓ Multi-currency ready
+✓ Feature flags
+✓ API versioning
+✓ Scalable architecture
+✓ No business-rule hardcoding
+✓ No fake approval decisions
+✓ No fake risk calculations
+✓ No customer access to internal information
+
+==================================================
+MOST IMPORTANT RULE
+==================================================
+
+Build DealFlow360 as a REAL frontend architecture,
+not as a collection of screenshots.
+
+Every screen must be:
+
+DYNAMIC
+API-DRIVEN
+PERMISSION-AWARE
+STATE-AWARE
+RESPONSIVE
+REUSABLE
+SCALABLE
+TESTABLE
+
+The Quote/Deal should be the central object connecting every module.
+
+The UI should make the business intelligence visible:
+
+"WHAT happened?"
+"WHY did it happen?"
+"WHO must act?"
+"WHAT changed?"
+"WHAT is the financial impact?"
+"WHAT happens next?"
+
+The final result should be impressive enough for an Odoo Hackathon demo while remaining architecturally suitable for future production development.

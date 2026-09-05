@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 220 14% 96%; /* #f3f4f6 */
+    --foreground: 232 16% 17%; /* #252733 */
+
+    --card: 0 0% 100%; /* #ffffff */
+    --card-foreground: 232 16% 17%; /* #252733 */
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 232 16% 17%;
+
+    --primary: 315 20% 37%; /* #714b67 */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 14% 96%; /* #f3f4f6 */
+    --secondary-foreground: 232 16% 17%;
+
+    --muted: 220 14% 94%;
+    --muted-foreground: 232 10% 46%; /* #6c6e7e */
+
+    --accent: 320 22% 95%; /* #f5eff3 */
+    --accent-foreground: 315 20% 37%; /* #714b67 */
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 13% 90%; /* #e5e7eb */
+    --input: 220 13% 90%;
+    --ring: 315 20% 37%; /* #714b67 */
+
+    --radius: 0.875rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Josefin Sans', system-ui, -apple-system, sans-serif;
+    letter-spacing: 0.01em;
+  }
+  h1, h2, h3, .font-heading, .font-display {
+    font-family: 'Unbounded', 'Josefin Sans', sans-serif;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f3f4f6;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #714b67;
+}
+
+/* Glass panel */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(229, 231, 235, 0.8);
+}
