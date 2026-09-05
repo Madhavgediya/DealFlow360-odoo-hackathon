@@ -239,7 +239,6 @@ interface AuthState {
   user: User | null;
   company: Company;
   currency: CurrencyCode;
-  accessToken: string | null;
   isAuthenticated: boolean;
   isServerOnline: boolean;
   setUser: (user: User | null) => void;
@@ -247,16 +246,15 @@ interface AuthState {
   setCurrency: (currency: CurrencyCode) => void;
   setServerOnline: (online: boolean) => void;
   switchRole: (role: UserRole) => void;
-  login: (user: User, token?: string) => void;
+  login: (user: User) => void;
   logout: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
-  user: DEMO_USERS.ADMIN,
+  user: null,
   company: DEMO_COMPANIES[0],
-  currency: 'INR',
-  accessToken: 'jwt-demo-token-dealflow360',
-  isAuthenticated: true,
+  currency: 'USD',
+  isAuthenticated: false,
   isServerOnline: true,
   setUser: (user) => set({ user }),
   setCompany: (company) => set({ company, currency: company.currency }),
@@ -266,7 +264,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     const newUser = DEMO_USERS[role] || DEMO_USERS.ADMIN;
     set({ user: newUser });
   },
-  login: (user, token) => set({ user, accessToken: token || 'jwt-token', isAuthenticated: true }),
-  logout: () => set({ user: null, accessToken: null, isAuthenticated: false }),
+  login: (user) => set({ user, isAuthenticated: true }),
+  logout: () => set({ user: null, isAuthenticated: false }),
 }));
 

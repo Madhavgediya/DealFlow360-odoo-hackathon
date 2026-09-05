@@ -21,12 +21,19 @@ const invoiceRoutes = require('./src/modules/invoices/invoice.routes');
 const paymentRoutes = require('./src/modules/payments/payment.routes');
 const reportRoutes = require('./src/modules/reports/report.routes');
 const errorHandler = require('./src/middleware/error.middleware');
+const cors = require('cors');
+const cookieParser = require('cookie-parser');
 
 const app = express();
 const PORT = process.env.PORT || 5050;
 const HOST = "0.0.0.0";
 
 // Middleware
+app.use(cors({
+  origin: ['http://localhost:5173', 'http://10.217.113.128:5173', 'http://127.0.0.1:5173'],
+  credentials: true
+}));
+app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

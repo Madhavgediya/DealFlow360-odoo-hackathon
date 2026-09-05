@@ -6,18 +6,12 @@ export const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true,
 });
 
 
-// Intercept requests to attach Company & JWT tokens
+// Intercept requests to attach trace ID (token is handled automatically via cookies)
 apiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem('dealflow360_jwt') || 'demo-jwt-token';
-  const companyId = localStorage.getItem('dealflow360_company_id') || 'comp-1';
-  
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  config.headers['X-Company-ID'] = companyId;
   config.headers['X-Request-ID'] = `req-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
   return config;
 });

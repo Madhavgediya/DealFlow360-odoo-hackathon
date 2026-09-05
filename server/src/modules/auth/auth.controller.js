@@ -22,6 +22,13 @@ const signin = async (req, res, next) => {
     const audience = req.body.audience || 'app';
     const result = await authService.signin(req.body, audience);
     
+    res.cookie('dealflow360_jwt', result.token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    });
+
     res.status(200).json({
       success: true,
       message: 'Signed in successfully',
@@ -44,8 +51,18 @@ const getMe = async (req, res, next) => {
   }
 };
 
+const logout = (req, res) => {
+  res.clearCookie('dealflow360_jwt', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+  });
+  res.status(200).json({ success: true, message: 'Logged out successfully' });
+};
+
 module.exports = {
   signup,
   signin,
-  getMe
+  getMe,
+  logout
 };

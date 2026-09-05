@@ -1,19 +1,24 @@
-import { delay, formatSuccessResponse } from './client';
-import { mockDb } from '../mock/mockDatabase';
+import { apiClient } from './client';
 import { ApiResponse } from '../../types/api';
 import { Invoice } from '../../types/billing';
 
 export const billingApi = {
   getInvoices: async (): Promise<ApiResponse<Invoice[]>> => {
-    await delay(180);
-    return formatSuccessResponse(mockDb.getInvoices());
+    try {
+      const res = await apiClient.get<ApiResponse<Invoice[]>>('/invoices');
+      return res.data;
+    } catch (err: any) {
+      return { success: false, data: null, error: err.response?.data?.message || 'Failed to fetch invoices' };
+    }
   },
 
   getInvoiceById: async (id: string): Promise<ApiResponse<Invoice>> => {
-    await delay(150);
-    const inv = mockDb.getInvoiceById(id);
-    if (!inv) throw new Error('Invoice not found');
-    return formatSuccessResponse(inv);
+    try {
+      const res = await apiClient.get<ApiResponse<Invoice>>(`/invoices/${id}`);
+      return res.data;
+    } catch (err: any) {
+      return { success: false, data: null, error: err.response?.data?.message || 'Failed to fetch invoice' };
+    }
   },
 
   recordPayment: async (
@@ -22,8 +27,19 @@ export const billingApi = {
     paymentMethod: any,
     reference: string
   ): Promise<ApiResponse<Invoice>> => {
-    await delay(350);
-    const updated = mockDb.recordInvoicePayment(invoiceId, amount, paymentMethod, reference);
-    return formatSuccessResponse(updated, undefined, 'Payment recorded successfully!');
+    try {
+      await apiClient.post('/payments/register', {
+        invoice_id: invoiceId,
+        amount,
+        payment_method: paymentMethod || 'BANK_TRANSFER',
+        reference,
+      });
+
+      // Fetch the updated invoice to return
+      const res = await apiClient.get<ApiResponse<Invoice>>(`/invoices/${invoiceId}`);
+      return { ...res.data, message: 'Payment recorded successfully!' };
+    } catch (err: any) {
+      return { success: false, data: null, error: err.response?.data?.message || 'Failed to record payment' };
+    }
   },
 };
