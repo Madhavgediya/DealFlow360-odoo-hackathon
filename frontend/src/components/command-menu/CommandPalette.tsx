@@ -12,6 +12,7 @@ import {
   Receipt,
   ShieldCheck,
   ArrowRight,
+  UserCircle,
 } from 'lucide-react';
 import { cn } from '../../utils/formatting';
 
@@ -47,6 +48,7 @@ export function CommandPalette() {
   const results = React.useMemo<CommandPaletteItem[]>(() => {
     if (!query) {
       return [
+        { id: 'quick-profile', title: 'My Profile & Account Management', subtitle: 'Manage personal info, security, 2FA, and preferences', category: 'Account', icon: <UserCircle className="w-4 h-4 text-[#714b67]" />, route: '/profile' },
         { id: 'quick-quotes', title: 'Quotations & Pipeline', category: 'Navigation', icon: <FileText className="w-4 h-4 text-[#714b67]" />, route: '/sales/quotes' },
         { id: 'quick-approvals', title: 'Approval Inbox (Pending)', category: 'Navigation', icon: <ShieldCheck className="w-4 h-4 text-[#714b67]" />, route: '/approvals' },
         { id: 'quick-crm', title: 'CRM Leads & Pipeline', category: 'Navigation', icon: <Users className="w-4 h-4 text-[#252733]" />, route: '/crm/leads' },
@@ -56,6 +58,7 @@ export function CommandPalette() {
         { id: 'quick-invoices', title: 'Invoices & Billing', category: 'Navigation', icon: <Receipt className="w-4 h-4 text-[#252733]" />, route: '/billing/invoices' },
       ];
     }
+
 
     const q = query.toLowerCase();
     const items: CommandPaletteItem[] = [];

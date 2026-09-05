@@ -2,12 +2,14 @@ import { Company } from './api';
 
 export type UserRole =
   | 'ADMIN'
-  | 'SALES_MANAGER'
   | 'SALES_REP'
-  | 'FINANCE_DIRECTOR'
-  | 'WAREHOUSE_MANAGER'
-  | 'PROCUREMENT_LEAD'
-  | 'CUSTOMER';
+  | 'SALES_MANAGER'
+  | 'FINANCE'
+  | 'OPERATIONS'
+  | 'CUSTOMER'
+  | 'FINANCE_DIRECTOR' // mapped alias to FINANCE
+  | 'WAREHOUSE_MANAGER' // mapped alias to OPERATIONS
+  | 'PROCUREMENT_LEAD'; // mapped alias to OPERATIONS
 
 export type Permission =
   | 'quote.view'
@@ -47,10 +49,31 @@ export type Permission =
   | 'settings.manage'
   | 'ai.use';
 
+export interface UserPreferences {
+  emailApprovals?: boolean;
+  emailCustomerActivity?: boolean;
+  emailBillingReminders?: boolean;
+  smsAlerts?: boolean;
+  weeklyDigest?: boolean;
+}
+
 export interface User {
   id: string;
   name: string;
+  firstName?: string;
+  lastName?: string;
   email: string;
+  phone?: string;
+  jobTitle?: string;
+  department?: string;
+  team?: string;
+  location?: string;
+  memberSince?: string;
+  status?: 'ACTIVE' | 'INACTIVE' | string;
+  created_at?: string;
+  updated_at?: string;
+  twoFactorEnabled?: boolean;
+  preferences?: UserPreferences;
   avatarUrl?: string;
   role: UserRole;
   roleTitle: string;
@@ -59,9 +82,28 @@ export interface User {
   customerId?: string; // If role is CUSTOMER
 }
 
+export interface ProfileUpdatePayload {
+  firstName?: string;
+  lastName?: string;
+  name?: string;
+  email?: string;
+  phone?: string;
+  jobTitle?: string;
+  department?: string;
+  team?: string;
+  location?: string;
+}
+
+export interface PasswordChangePayload {
+  currentPassword?: string;
+  newPassword: string;
+  confirmPassword?: string;
+}
+
 export interface AuthSession {
   user: User | null;
   company: Company | null;
   accessToken: string | null;
   isAuthenticated: boolean;
 }
+

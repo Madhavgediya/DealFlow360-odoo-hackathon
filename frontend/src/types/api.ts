@@ -1,6 +1,6 @@
 export interface ApiResponse<T = any> {
   success: boolean;
-  data: T;
+  data: T | null;
   meta?: {
     page?: number;
     pageSize?: number;
@@ -11,6 +11,7 @@ export interface ApiResponse<T = any> {
   message?: string | null;
   error?: string | null;
 }
+
 
 export interface PaginatedQuery {
   page?: number;

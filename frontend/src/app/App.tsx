@@ -1,8 +1,11 @@
+import React, { useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from 'react-router-dom';
 import { router } from './router';
 import { Toaster } from 'sonner';
 import { GlobalErrorBoundary } from '../components/common/GlobalErrorBoundary';
+import { authApi } from '../services/api/auth.api';
+import { useAuthStore } from '../stores/auth.store';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -15,6 +18,27 @@ const queryClient = new QueryClient({
 });
 
 export function App() {
+  const { setServerOnline } = useAuthStore();
+
+  useEffect(() => {
+    // Hydrate authenticated user session from backend if token exists
+    const initSession = async () => {
+      try {
+        const isOnline = await authApi.checkHealth();
+        setServerOnline(isOnline);
+        
+        const token = localStorage.getItem('dealflow360_jwt');
+        if (token && isOnline) {
+          await authApi.getProfile();
+        }
+      } catch (err) {
+        console.debug('Session initialization background note:', err);
+      }
+    };
+
+    initSession();
+  }, [setServerOnline]);
+
   return (
     <GlobalErrorBoundary>
       <QueryClientProvider client={queryClient}>
@@ -39,3 +63,4 @@ export function App() {
 }
 
 export default App;
+
