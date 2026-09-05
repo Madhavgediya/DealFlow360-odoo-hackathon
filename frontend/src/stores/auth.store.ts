@@ -246,7 +246,7 @@ interface AuthState {
   setCurrency: (currency: CurrencyCode) => void;
   setServerOnline: (online: boolean) => void;
   switchRole: (role: UserRole) => void;
-  login: (user: User) => void;
+  login: (user: User, token?: string) => void;
   logout: () => void;
 }
 
@@ -264,7 +264,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     const newUser = DEMO_USERS[role] || DEMO_USERS.ADMIN;
     set({ user: newUser });
   },
-  login: (user) => set({ user, isAuthenticated: true }),
+  login: (user, _token) => set({ user, isAuthenticated: true }),
   logout: () => set({ user: null, isAuthenticated: false }),
 }));
 
