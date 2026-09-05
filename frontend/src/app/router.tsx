@@ -40,6 +40,9 @@ import { PortalQuoteDetailPage } from '../pages/portal/PortalQuoteDetailPage';
 import { PortalOrdersPage } from '../pages/portal/PortalOrdersPage';
 import { PortalInvoicesPage } from '../pages/portal/PortalInvoicesPage';
 import { PortalSubscriptionsPage } from '../pages/portal/PortalSubscriptionsPage';
+import { AdminRolesPage } from '../pages/admin/AdminRolesPage';
+import { AdminPermissionsPage } from '../pages/admin/AdminPermissionsPage';
+import { AdminCompaniesPage } from '../pages/admin/AdminCompaniesPage';
 
 export const router = createBrowserRouter([
   {
@@ -192,6 +195,30 @@ export const router = createBrowserRouter([
       {
         path: 'settings/profile',
         element: <ProfilePage />,
+      },
+      {
+        path: 'settings/companies',
+        element: (
+          <ProtectedRoute requiredRole="SUPER_ADMIN">
+            <AdminCompaniesPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'settings/roles',
+        element: (
+          <ProtectedRoute requiredRole="ADMIN">
+            <AdminRolesPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'settings/permissions',
+        element: (
+          <ProtectedRoute requiredRole="ADMIN">
+            <AdminPermissionsPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'settings/users',

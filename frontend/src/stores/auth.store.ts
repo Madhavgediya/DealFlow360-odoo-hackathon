@@ -23,6 +23,18 @@ export const DEMO_COMPANIES: Company[] = [
 ];
 
 export const DEMO_USERS: Record<UserRole, User> = {
+  SUPER_ADMIN: {
+    id: 'usr-super',
+    name: 'Platform Owner',
+    firstName: 'Platform',
+    lastName: 'Owner',
+    email: 'super@dealflow360.com',
+    status: 'ACTIVE',
+    role: 'SUPER_ADMIN',
+    roleTitle: ROLE_LABELS.SUPER_ADMIN,
+    companyId: '', // Null or empty for platform level
+    permissions: ROLE_PERMISSIONS.SUPER_ADMIN,
+  },
   ADMIN: {
     id: 'usr-admin',
     name: 'Jordan Davis',
@@ -240,11 +252,13 @@ interface AuthState {
   company: Company;
   currency: CurrencyCode;
   isAuthenticated: boolean;
+  isInitializing: boolean;
   isServerOnline: boolean;
   setUser: (user: User | null) => void;
   setCompany: (company: Company) => void;
   setCurrency: (currency: CurrencyCode) => void;
   setServerOnline: (online: boolean) => void;
+  setInitializing: (initializing: boolean) => void;
   switchRole: (role: UserRole) => void;
   login: (user: User, token?: string) => void;
   logout: () => void;
@@ -255,11 +269,13 @@ export const useAuthStore = create<AuthState>((set) => ({
   company: DEMO_COMPANIES[0],
   currency: 'USD',
   isAuthenticated: false,
+  isInitializing: true,
   isServerOnline: true,
   setUser: (user) => set({ user }),
   setCompany: (company) => set({ company, currency: company.currency }),
   setCurrency: (currency) => set({ currency }),
   setServerOnline: (isServerOnline) => set({ isServerOnline }),
+  setInitializing: (isInitializing) => set({ isInitializing }),
   switchRole: (role: UserRole) => {
     const newUser = DEMO_USERS[role] || DEMO_USERS.ADMIN;
     set({ user: newUser });

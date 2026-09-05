@@ -13,6 +13,7 @@ const authenticateFactory = (expectedAudience = 'app') => async (req, res, next)
     }
 
     if (!token) {
+      console.log('[Auth Middleware] Token missing');
       return res.status(401).json({ success: false, message: 'Authentication required' });
     }
 
@@ -20,17 +21,55 @@ const authenticateFactory = (expectedAudience = 'app') => async (req, res, next)
     
     // Check audience
     if (decoded.aud !== expectedAudience) {
+      console.log('[Auth Middleware] Invalid audience');
       return res.status(403).json({ success: false, message: 'Invalid token audience' });
     }
 
     const user = await authRepository.findUserById(decoded.sub);
 
     if (!user) {
+      console.log('[Auth Middleware] User not found for ID:', decoded.sub);
       return res.status(401).json({ success: false, message: 'User not found' });
     }
 
     if (user.status !== 'ACTIVE') {
+      console.log('[Auth Middleware] User not active:', user.status);
       return res.status(401).json({ success: false, message: 'Account is inactive' });
+    }
+
+    // Fetch dynamic permissions based on assigned roles
+    try {
+      const rolePermissionRepo = require('../modules/roles/rolePermission.repository');
+      const dbPermissions = await rolePermissionRepo.getUserPermissions(user.id);
+      user.permissions = dbPermissions.map(p => `${p.module}:${p.action}`);
+    } catch (err) {
+      user.permissions = [];
+    }
+
+    // Super Admin tenant context hydration
+    if (user.role === 'SUPER_ADMIN') {
+      const tenantId = req.headers['x-company-id'];
+      // Only hydrate if it's a valid UUID to prevent Postgres 22P02 (Invalid text representation) errors
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (tenantId && uuidRegex.test(tenantId)) {
+        user.company_id = tenantId;
+      }
+    }
+
+    // Hydrate customer_id if user is a CUSTOMER
+    if (user.role === 'CUSTOMER') {
+      try {
+        const db = require('../config/database');
+        const contactRes = await db.query(
+          'SELECT customer_id FROM contacts WHERE email = $1 AND company_id = $2 LIMIT 1',
+          [user.email, user.company_id]
+        );
+        if (contactRes.rows.length > 0) {
+          user.customer_id = contactRes.rows[0].customer_id;
+        }
+      } catch (err) {
+        console.error('Error hydrating customer_id:', err);
+      }
     }
 
     req.user = user;

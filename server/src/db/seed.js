@@ -25,13 +25,30 @@ async function seed() {
       'activities', 'opportunities',
       'contacts', 'customers',
       'audit_logs', 'lead_interactions', 'leads',
-      'user_roles', 'permissions',
+      'user_roles', 'role_permissions', 'permissions',
       'roles', 'users', 'companies'
     ];
 
     for (const table of tables) {
-      await client.query(`DELETE FROM ${table}`);
+      try {
+        await client.query(`DELETE FROM ${table}`);
+      } catch (err) {
+        if (err.code === '42P01') {
+          console.warn(`Table ${table} does not exist, skipping wipe.`);
+        } else {
+          throw err;
+        }
+      }
     }
+
+    // 0.1 Super Admin (Platform Level)
+    console.log('Seeding Platform Super Admin...');
+    const hash = await bcrypt.hash('admin123', 10);
+    const superAdminRes = await client.query(`
+      INSERT INTO users (email, password_hash, first_name, last_name, role, name, status)
+      VALUES ($1, $2, 'Platform', 'Owner', 'SUPER_ADMIN', 'Platform Super Admin', 'ACTIVE') RETURNING id
+    `, ['super@dealflow360.com', hash]);
+    const superAdminId = superAdminRes.rows[0].id;
 
     // 1. Company
     console.log('Seeding company...');
@@ -50,20 +67,27 @@ async function seed() {
     const salesManagerRoleId = salesManagerRole.rows[0].id;
     const salesRepRoleId = salesRepRole.rows[0].id;
 
-    await client.query(`
+    const perm1 = await client.query(`
       INSERT INTO permissions (module, action, resource, description) VALUES 
-      ('users', 'manage', '*', 'Manage users'), 
-      ('billing', 'manage', '*', 'Manage billing')
+      ('users', 'manage', '*', 'Manage users') RETURNING id
+    `);
+    const perm2 = await client.query(`
+      INSERT INTO permissions (module, action, resource, description) VALUES 
+      ('billing', 'manage', '*', 'Manage billing') RETURNING id
     `);
 
+    // Assign permissions to Admin role
+    await client.query(`
+      INSERT INTO role_permissions (role_id, permission_id) VALUES ($1, $2), ($1, $3)
+    `, [adminRoleId, perm1.rows[0].id, perm2.rows[0].id]);
+
     // 3. Users
-    console.log('Seeding users...');
-    const hash = await bcrypt.hash('admin123', 10);
+    console.log('Seeding company users...');
     const adminUser = await client.query(`
       INSERT INTO users (company_id, email, password_hash, first_name, last_name, role, name)
       VALUES ($1, 'admin@acme.com', $2, 'Admin', 'User', 'ADMIN', 'Admin User') RETURNING id
     `, [companyId, hash]);
-    
+
     const managerUser = await client.query(`
       INSERT INTO users (company_id, email, password_hash, first_name, last_name, role, name)
       VALUES ($1, 'manager@acme.com', $2, 'Sales', 'Manager', 'SALES_MANAGER', 'Sales Manager') RETURNING id
@@ -93,7 +117,7 @@ async function seed() {
       INSERT INTO products (company_id, category_id, name, sku, description, base_price, is_active)
       VALUES ($1, $2, 'Enterprise License (Annual)', 'ENT-LIC-1Y', 'Annual enterprise license', 12000.00, true) RETURNING id
     `, [companyId, catId]);
-    
+
     const p2Res = await client.query(`
       INSERT INTO products (company_id, category_id, name, sku, description, base_price, is_active)
       VALUES ($1, $2, 'Server Hardware', 'SRV-HW-01', 'Standard server hardware', 5000.00, true) RETURNING id
@@ -148,7 +172,7 @@ async function seed() {
       VALUES ($1, $2, $3, 'ACCEPTED', 25000.00, 25000.00, $4) RETURNING id
     `, [companyId, cust1Id, opp1Id, repUserId]);
     const quoteId = quoteRes.rows[0].id;
-    
+
     await client.query(`
       INSERT INTO quotation_lines (company_id, quotation_id, product_id, quantity, unit_price, line_total)
       VALUES ($1, $2, $3, 5, 5000.00, 25000.00)

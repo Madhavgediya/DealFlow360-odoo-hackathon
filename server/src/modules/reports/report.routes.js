@@ -8,6 +8,6 @@ const { apiLimiter } = require('../../middleware/rateLimit.middleware');
 router.use(authenticate);
 router.use(apiLimiter);
 
-router.get('/dashboard', requireRole(['ADMIN', 'SALES_MANAGER']), ctrl.getDashboardMetrics);
+router.get('/dashboard', ctrl.getDashboardMetrics);
 
 module.exports = router;

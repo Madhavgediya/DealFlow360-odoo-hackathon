@@ -9,7 +9,11 @@ const createQuotation = async (req, res, next) => {
 
 const getQuotations = async (req, res, next) => {
   try {
-    const quotations = await quotationService.getQuotations(req.user.company_id, req.query);
+    const filters = req.query;
+    if (req.user.role === 'CUSTOMER') {
+      filters.customer_id = req.user.customer_id;
+    }
+    const quotations = await quotationService.getQuotations(req.user.company_id, filters);
     res.status(200).json({ success: true, data: quotations });
   } catch (err) { next(err); }
 };

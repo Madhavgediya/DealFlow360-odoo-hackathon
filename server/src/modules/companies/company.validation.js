@@ -11,7 +11,11 @@ const createCompanySchema = Joi.object({
   country: Joi.string().trim().max(100).optional().allow('', null),
   timezone: Joi.string().trim().max(100).optional().allow('', null),
   default_currency_id: Joi.string().trim().max(10).optional().allow('', null),
-  status: Joi.string().valid(...ALLOWED_STATUSES).optional()
+  status: Joi.string().valid(...ALLOWED_STATUSES).optional(),
+  business_type: Joi.string().valid('PRODUCT', 'SERVICE', 'BOTH').optional(),
+  admin_name: Joi.string().trim().max(255).optional(),
+  admin_email: Joi.string().trim().email().optional(),
+  admin_password: Joi.string().min(8).optional()
 });
 
 const updateCompanySchema = Joi.object({

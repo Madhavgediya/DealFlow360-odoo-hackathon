@@ -32,4 +32,5 @@ export interface Company {
   logoUrl?: string;
   taxId: string;
   country: string;
+  business_type?: 'PRODUCT' | 'SERVICE' | 'BOTH';
 }

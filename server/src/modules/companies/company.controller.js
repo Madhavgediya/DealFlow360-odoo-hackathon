@@ -23,6 +23,9 @@ const getCompanyById = async (req, res, next) => {
 
 const updateCompany = async (req, res, next) => {
   try {
+    if (req.user.role !== 'SUPER_ADMIN' && req.user.company_id !== req.params.id) {
+      return res.status(403).json({ success: false, message: 'Access denied: Cannot update other company' });
+    }
     const company = await companyService.updateCompany(req.params.id, req.body);
     res.status(200).json({ success: true, data: company });
   } catch (err) { next(err); }

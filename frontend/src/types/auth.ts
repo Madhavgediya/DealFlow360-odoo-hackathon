@@ -1,6 +1,7 @@
 import { Company } from './api';
 
 export type UserRole =
+  | 'SUPER_ADMIN'
   | 'ADMIN'
   | 'SALES_REP'
   | 'SALES_MANAGER'

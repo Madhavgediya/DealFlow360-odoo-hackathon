@@ -12,4 +12,8 @@ router.get('/:id', roleValidation.validateUUID, roleController.getRoleById);
 router.put('/:id', roleValidation.validateUUID, roleValidation.validateUpdateRole, roleController.updateRole);
 router.delete('/:id', roleValidation.validateUUID, roleController.deleteRole);
 
+// Role Permissions
+router.get('/:id/permissions', roleValidation.validateUUID, roleController.getRolePermissions);
+router.post('/:id/permissions', roleValidation.validateUUID, roleController.updateRolePermissions);
+
 module.exports = router;

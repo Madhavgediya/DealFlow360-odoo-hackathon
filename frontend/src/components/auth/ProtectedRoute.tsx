@@ -12,8 +12,17 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
-  const { isAuthenticated, user } = useAuthStore();
+  const { isAuthenticated, user, isInitializing } = useAuthStore();
   const location = useLocation();
+
+  if (isInitializing) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#714b67]"></div>
+        <p className="mt-4 text-xs font-semibold text-slate-500 font-sans tracking-wide">Restoring secure session...</p>
+      </div>
+    );
+  }
 
   if (!isAuthenticated || !user) {
     // Redirect unauthenticated visitors to login and save the location they tried to reach

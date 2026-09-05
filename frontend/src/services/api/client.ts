@@ -10,9 +10,21 @@ export const apiClient = axios.create({
 });
 
 
-// Intercept requests to attach trace ID (token is handled automatically via cookies)
+import { useAuthStore } from '../../stores/auth.store';
+
+// Intercept requests to attach trace ID and company context
 apiClient.interceptors.request.use((config) => {
   config.headers['X-Request-ID'] = `req-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+  
+  try {
+    const companyId = useAuthStore.getState().company?.id;
+    if (companyId) {
+      config.headers['x-company-id'] = companyId;
+    }
+  } catch (e) {
+    // Ignore errors during store access
+  }
+  
   return config;
 });
 

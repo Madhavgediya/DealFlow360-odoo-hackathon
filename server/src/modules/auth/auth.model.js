@@ -1,5 +1,6 @@
 // Simple constants representing the schema, we rely on the DB definition primarily.
 const ROLES = {
+  SUPER_ADMIN: 'SUPER_ADMIN',
   ADMIN: 'ADMIN',
   SALES_REP: 'SALES_REP',
   SALES_MANAGER: 'SALES_MANAGER',

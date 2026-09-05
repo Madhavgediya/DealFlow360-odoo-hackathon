@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { BrandLogo } from '../../components/common/BrandLogo';
-import { LandingThreeCanvas } from '../../components/landing/LandingThreeCanvas';
-import { authApi } from '../../services/api/auth.api';
-import { Button } from '../../components/ui/button';
-import { Input } from '../../components/ui/input';
-import { Card } from '../../components/ui/card';
+import React, { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { BrandLogo } from "../../components/common/BrandLogo";
+import { LandingThreeCanvas } from "../../components/landing/LandingThreeCanvas";
+import { authApi } from "../../services/api/auth.api";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import { Card } from "../../components/ui/card";
 import {
   User as UserIcon,
   Mail,
@@ -17,20 +17,20 @@ import {
   EyeOff,
   BarChart2,
   FileText,
-} from 'lucide-react';
-import { toast } from 'sonner';
+} from "lucide-react";
+import { toast } from "sonner";
 
 export function RegisterPage() {
   const navigate = useNavigate();
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [role] = useState('SALES_REP');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [role] = useState("CUSTOMER");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [agreeTerms, setAgreeTerms] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
+  const [errorMsg, setErrorMsg] = useState("");
 
   // Mouse parallax state for 3D floating graphics
   const [mouseOffset, setMouseOffset] = React.useState({ x: 0, y: 0 });
@@ -45,26 +45,26 @@ export function RegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorMsg('');
+    setErrorMsg("");
 
     if (!name.trim()) {
-      setErrorMsg('Full name is required');
+      setErrorMsg("Full name is required");
       return;
     }
-    if (!email.trim() || !email.includes('@')) {
-      setErrorMsg('Valid business email is required');
+    if (!email.trim() || !email.includes("@")) {
+      setErrorMsg("Valid business email is required");
       return;
     }
     if (!password || password.length < 6) {
-      setErrorMsg('Password must be at least 6 characters');
+      setErrorMsg("Password must be at least 6 characters");
       return;
     }
     if (password !== confirmPassword) {
-      setErrorMsg('Passwords do not match');
+      setErrorMsg("Passwords do not match");
       return;
     }
     if (!agreeTerms) {
-      setErrorMsg('Please accept terms & conditions');
+      setErrorMsg("Please accept terms & conditions");
       return;
     }
 
@@ -79,16 +79,16 @@ export function RegisterPage() {
 
       if (res.success) {
         toast.success(`Welcome to DealFlow360, ${name.trim()}!`);
-        if (role === 'CUSTOMER') {
-          navigate('/portal');
+        if (role === "CUSTOMER") {
+          navigate("/portal");
         } else {
-          navigate('/dashboard');
+          navigate("/dashboard");
         }
       } else {
-        setErrorMsg(res.error || 'Failed to create account');
+        setErrorMsg(res.error || "Failed to create account");
       }
     } catch (err: any) {
-      setErrorMsg(err.message || 'An unexpected error occurred during signup');
+      setErrorMsg(err.message || "An unexpected error occurred during signup");
     } finally {
       setIsLoading(false);
     }
@@ -115,7 +115,10 @@ export function RegisterPage() {
         </div>
 
         {/* Curved Connection Lines */}
-        <svg className="absolute inset-0 w-full h-full opacity-20 hidden md:block" xmlns="http://www.w3.org/2000/svg">
+        <svg
+          className="absolute inset-0 w-full h-full opacity-20 hidden md:block"
+          xmlns="http://www.w3.org/2000/svg"
+        >
           <path
             d="M 50 250 Q 250 150 400 350 T 800 300 T 1200 450"
             fill="none"
@@ -130,7 +133,6 @@ export function RegisterPage() {
 
       {/* Main Container framed by 3D Elements */}
       <div className="relative z-10 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-center px-4 sm:px-6">
-
         {/* Left Floating 3D Graphic (Desktop) */}
         <div
           className="hidden lg:flex lg:col-span-3 flex-col items-center justify-center gap-4 transition-transform duration-300 ease-out pointer-events-none"
@@ -155,7 +157,10 @@ export function RegisterPage() {
         {/* Center Register Card */}
         <div className="lg:col-span-6 w-full max-w-md mx-auto space-y-5">
           <div className="text-center space-y-3">
-            <div className="flex justify-center cursor-pointer" onClick={() => navigate('/')}>
+            <div
+              className="flex justify-center cursor-pointer"
+              onClick={() => navigate("/")}
+            >
               <BrandLogo size="lg" />
             </div>
             <p className="text-xs text-slate-500 font-medium">
@@ -208,7 +213,7 @@ export function RegisterPage() {
                 </label>
                 <div className="relative">
                   <Input
-                    type={showPassword ? 'text' : 'password'}
+                    type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="At least 6 characters"
@@ -221,7 +226,11 @@ export function RegisterPage() {
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
                   >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {showPassword ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
                   </button>
                 </div>
               </div>
@@ -249,7 +258,8 @@ export function RegisterPage() {
                   className="mt-0.5 w-4 h-4 rounded border-slate-300 accent-[#714b67]"
                 />
                 <span className="text-[11px] text-slate-600 leading-tight">
-                  I agree to the DealFlow360 Enterprise Terms of Service and Privacy Policy.
+                  I agree to the DealFlow360 Enterprise Terms of Service and
+                  Privacy Policy.
                 </span>
               </label>
 
@@ -258,13 +268,17 @@ export function RegisterPage() {
                 disabled={isLoading}
                 className="w-full gap-2 shadow-md shadow-[#714b67]/20 rounded-xl bg-[#714b67] hover:bg-[#5e3c54] text-white py-2.5 font-semibold text-xs transition-all duration-200 active:scale-95"
               >
-                <span>{isLoading ? 'Creating Account...' : 'Create DealFlow360 Account'}</span>
+                <span>
+                  {isLoading
+                    ? "Creating Account..."
+                    : "Create DealFlow360 Account"}
+                </span>
                 <ArrowRight className="w-4 h-4" />
               </Button>
             </form>
 
             <div className="pt-3 border-t border-slate-100 text-center text-xs text-slate-500">
-              Already have an account?{' '}
+              Already have an account?{" "}
               <Link
                 to="/login"
                 className="font-bold text-[#714b67] hover:underline"
@@ -288,7 +302,10 @@ export function RegisterPage() {
 
           <div className="w-60 p-5 rounded-2xl bg-white/85 backdrop-blur-xl border border-white/70 shadow-2xl shadow-[#714b67]/15 space-y-4">
             <div className="flex items-center justify-center py-1">
-              <svg className="w-20 h-20 transform -rotate-90" viewBox="0 0 36 36">
+              <svg
+                className="w-20 h-20 transform -rotate-90"
+                viewBox="0 0 36 36"
+              >
                 <path
                   className="text-[#f5eff3]"
                   strokeWidth="4.5"
@@ -317,7 +334,6 @@ export function RegisterPage() {
             <FileText className="w-4 h-4" />
           </div>
         </div>
-
       </div>
     </div>
   );

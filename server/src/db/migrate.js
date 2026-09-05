@@ -22,9 +22,11 @@ const runMigration = async () => {
         timezone VARCHAR,
         default_currency_id VARCHAR,
         status VARCHAR NOT NULL DEFAULT 'ACTIVE',
+        business_type VARCHAR DEFAULT 'BOTH' CHECK (business_type IN ('PRODUCT', 'SERVICE', 'BOTH')),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );`,
+      `ALTER TABLE companies ADD COLUMN IF NOT EXISTS business_type VARCHAR DEFAULT 'BOTH' CHECK (business_type IN ('PRODUCT', 'SERVICE', 'BOTH'));`,
 
       `CREATE TABLE IF NOT EXISTS users (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -61,6 +63,12 @@ const runMigration = async () => {
         resource VARCHAR NOT NULL,
         description VARCHAR,
         UNIQUE(module, action, resource)
+      );`,
+
+      `CREATE TABLE IF NOT EXISTS role_permissions (
+        role_id UUID NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+        permission_id UUID NOT NULL REFERENCES permissions(id) ON DELETE CASCADE,
+        PRIMARY KEY (role_id, permission_id)
       );`,
 
       `CREATE TABLE IF NOT EXISTS user_roles (

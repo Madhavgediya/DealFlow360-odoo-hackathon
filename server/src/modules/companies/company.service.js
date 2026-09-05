@@ -7,12 +7,31 @@ const createAppError = (message, statusCode, code) => {
   return err;
 };
 
+const bcrypt = require('bcryptjs');
+
 const createCompany = async (data) => {
   if (data.code) {
     const existing = await companyRepository.getCompanyByCode(data.code);
     if (existing) throw createAppError('A company with this code already exists', 409, 'COMPANY_ALREADY_EXISTS');
   }
-  return companyRepository.createCompany(data);
+
+  // Ensure admin email is provided or fallback
+  const adminEmail = data.admin_email || `admin@${data.code || 'company'}.local`.toLowerCase();
+  const rawPassword = data.admin_password || 'Admin@123!';
+  const salt = await bcrypt.genSalt(10);
+  const passwordHash = await bcrypt.hash(rawPassword, salt);
+
+  const adminData = {
+    email: adminEmail,
+    password_hash: passwordHash,
+    firstName: data.admin_first_name || 'Admin',
+    lastName: data.admin_last_name || 'User',
+    name: data.admin_name || 'Company Admin'
+  };
+
+  const company = await companyRepository.createCompanyWithAdmin(data, adminData);
+  // Do not return password hash
+  return { ...company, admin_raw_password: data.admin_password ? undefined : rawPassword };
 };
 
 const getCompanies = async () => {

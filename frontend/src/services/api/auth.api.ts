@@ -187,7 +187,7 @@ export const authApi = {
       const response = await apiClient.get<ApiResponse<any>>('/auth/me');
       if (response.data && response.data.success && response.data.data) {
         const user = enrichServerUser(response.data.data);
-        useAuthStore.getState().setUser(user);
+        useAuthStore.getState().login(user);
         return formatSuccessResponse(user);
       }
 

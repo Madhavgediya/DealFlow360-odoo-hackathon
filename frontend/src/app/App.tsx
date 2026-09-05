@@ -18,7 +18,7 @@ const queryClient = new QueryClient({
 });
 
 export function App() {
-  const { setServerOnline } = useAuthStore();
+  const { setServerOnline, setInitializing } = useAuthStore();
 
   useEffect(() => {
     // Hydrate authenticated user session from backend if token exists
@@ -32,11 +32,13 @@ export function App() {
         }
       } catch (err) {
         console.debug('Session initialization background note:', err);
+      } finally {
+        setInitializing(false);
       }
     };
 
     initSession();
-  }, [setServerOnline]);
+  }, [setServerOnline, setInitializing]);
 
   return (
     <GlobalErrorBoundary>

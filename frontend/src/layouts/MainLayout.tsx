@@ -91,7 +91,7 @@ export function MainLayout() {
   }, [mobileMenuOpen]);
 
   // Comprehensive navigation groups for the whole ERP
-  const navigationGroups: NavGroup[] = [
+  const baseNavigationGroups: NavGroup[] = [
     {
       title: 'COMMERCIAL WORKSPACE',
       items: [
@@ -194,21 +194,57 @@ export function MainLayout() {
           icon: <Settings className="w-4 h-4" />,
         },
         {
-          label: 'User Access & Credentials',
-          path: '/settings/users',
-          icon: <ShieldCheck className="w-4 h-4 text-[#714b67]" />,
-          permission: 'settings.manage' as const,
-          badge: 'Admin',
-          badgeColor: 'bg-[#f5eff3] text-[#714b67] font-bold border border-[#ecdfe8]',
-        },
-        {
           label: 'My Profile & Account',
           path: '/profile',
           icon: <UserCircle className="w-4 h-4" />,
         },
       ],
     },
+    {
+      title: 'ADMINISTRATION',
+      items: [
+        {
+          label: 'Roles & Permissions',
+          path: '/settings/roles',
+          icon: <ShieldCheck className="w-4 h-4 text-[#714b67]" />,
+          permission: 'settings.manage' as const,
+          badge: 'Admin',
+          badgeColor: 'bg-[#f5eff3] text-[#714b67] font-bold border border-[#ecdfe8]',
+        },
+        {
+          label: 'Permissions Registry',
+          path: '/settings/permissions',
+          icon: <ShieldCheck className="w-4 h-4 text-[#714b67]" />,
+          permission: 'settings.manage' as const,
+        },
+        {
+          label: 'User Access',
+          path: '/settings/users',
+          icon: <Users className="w-4 h-4 text-[#714b67]" />,
+          permission: 'settings.manage' as const,
+        },
+      ],
+    },
   ];
+
+  const navigationGroups: NavGroup[] = user?.role === 'SUPER_ADMIN' ? [
+    {
+      title: 'PLATFORM MANAGEMENT',
+      items: [
+        {
+          label: 'Tenant Companies',
+          path: '/settings/companies',
+          icon: <Building className="w-4 h-4" />,
+        },
+        {
+          label: 'Platform Users',
+          path: '/settings/users',
+          icon: <Users className="w-4 h-4 text-[#714b67]" />,
+        },
+      ],
+    },
+    ...baseNavigationGroups
+  ] : baseNavigationGroups;
 
   const getPageTitle = () => {
     const p = location.pathname;
