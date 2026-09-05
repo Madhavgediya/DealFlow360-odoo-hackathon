@@ -3,14 +3,17 @@ const authRepository = require('../modules/auth/auth.repository');
 
 const authenticateFactory = (expectedAudience = 'app') => async (req, res, next) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ success: false, message: 'Authentication required' });
+    let token = req.cookies?.dealflow360_jwt;
+    
+    if (!token) {
+      const authHeader = req.headers.authorization;
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.split(' ')[1];
+      }
     }
 
-    const token = authHeader.split(' ')[1];
     if (!token) {
-      return res.status(401).json({ success: false, message: 'Invalid token format' });
+      return res.status(401).json({ success: false, message: 'Authentication required' });
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);

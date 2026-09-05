@@ -27,8 +27,7 @@ export function App() {
         const isOnline = await authApi.checkHealth();
         setServerOnline(isOnline);
         
-        const token = localStorage.getItem('dealflow360_jwt');
-        if (token && isOnline) {
+        if (isOnline) {
           await authApi.getProfile();
         }
       } catch (err) {
