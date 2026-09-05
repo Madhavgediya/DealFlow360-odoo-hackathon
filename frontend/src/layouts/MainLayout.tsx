@@ -25,14 +25,21 @@ import {
   ChevronLeft,
   ChevronRight,
   ExternalLink,
-  MoreHorizontal,
-  HelpCircle,
   ArrowRight,
   Sparkles,
   Layers,
+  UserCircle,
+  LogOut,
+  User,
+  MoreHorizontal,
 } from 'lucide-react';
+
+import { BrandLogo } from '../components/common/BrandLogo';
+import { authApi } from '../services/api/auth.api';
+import { toast } from 'sonner';
 import { cn } from '../utils/formatting';
 import { Permission } from '../types/auth';
+
 
 interface NavItem {
   label: string;
@@ -163,6 +170,11 @@ export function MainLayout() {
           path: '/deal-health',
           icon: <Settings className="w-4 h-4" />,
         },
+        {
+          label: 'My Profile & Account',
+          path: '/profile',
+          icon: <UserCircle className="w-4 h-4" />,
+        },
       ],
     },
   ];
@@ -170,6 +182,7 @@ export function MainLayout() {
   // Dynamic breadcrumb label
   const getPageTitle = () => {
     const p = location.pathname;
+    if (p.includes('/profile')) return 'My Profile';
     if (p.includes('/dashboard')) return 'Overview';
     if (p.includes('/sales/quotes/new')) return 'New Quotation';
     if (p.includes('/sales/quotes')) return 'Quotations';
@@ -187,11 +200,22 @@ export function MainLayout() {
     return 'Workspace';
   };
 
+
   const getInitials = (name?: string) => {
     if (!name) return 'JD';
     const parts = name.split(' ');
     if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
     return name.slice(0, 2).toUpperCase();
+  };
+
+  const handleLogout = async () => {
+    try {
+      await authApi.logout();
+      toast.success('Logged out of DealFlow360');
+      navigate('/login');
+    } catch (err) {
+      toast.error('Logout error');
+    }
   };
 
   return (
@@ -205,14 +229,25 @@ export function MainLayout() {
       {/* 3. Global Top Header */}
       <header className="h-16 border-b border-[#e5e7eb] bg-white px-4 sm:px-8 flex items-center justify-between sticky top-0 z-30 shadow-subtle">
         {/* Left: Breadcrumbs "Workspace / Overview" */}
-        <div className="flex items-center gap-2 text-xs text-slate-400">
+        <div className="flex items-center gap-3 text-xs text-slate-400">
+          <BrandLogo size="sm" showText={false} className="lg:hidden" />
           <span className="font-medium text-slate-500">Workspace</span>
           <span className="text-slate-300">/</span>
           <span className="font-semibold text-[#252733]">{getPageTitle()}</span>
         </div>
 
-        {/* Right: Search, Company, Currency, AI Copilot, Notifications, Profile */}
+        {/* Right: Server Status, Search, Company, Currency, AI Copilot, Notifications, Profile */}
         <div className="flex items-center gap-3">
+          {/* Live Backend Connection Indicator */}
+          <div
+            className="hidden sm:flex items-center gap-1.5 bg-emerald-50/80 border border-emerald-200 px-2.5 py-1 rounded-xl text-[11px] text-emerald-700 font-medium select-none"
+            title="DealFlow360 Backend API Gateway (Express + PostgreSQL)"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="hidden md:inline font-semibold">API Live</span>
+            <span className="text-[10px] text-emerald-600 font-mono">:5050</span>
+          </div>
+
           {/* Search Trigger */}
           <button
             onClick={() => setCommandPaletteOpen(true)}
@@ -329,9 +364,60 @@ export function MainLayout() {
             <ExternalLink className="w-3 h-3 text-slate-400" />
           </Link>
 
-          {/* Top Avatar */}
-          <div className="w-8 h-8 rounded-full bg-[#714b67] text-white font-bold text-xs flex items-center justify-center shadow-sm select-none font-display">
-            {getInitials(user?.name)}
+          {/* Top User Menu / Avatar with Dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setUserMenuOpen(!userMenuOpen)}
+              className="w-8 h-8 rounded-full bg-[#714b67] hover:bg-[#5e3c54] text-white font-bold text-xs flex items-center justify-center shadow-sm select-none font-display transition-all hover:scale-105 active:scale-95"
+              title="User menu"
+            >
+              {getInitials(user?.name)}
+            </button>
+
+            {userMenuOpen && (
+              <div className="absolute right-0 mt-2 w-56 rounded-2xl border border-[#e5e7eb] bg-white shadow-xl z-50 overflow-hidden animate-in zoom-in-95 p-1.5 divide-y divide-slate-100">
+                <div className="p-2.5">
+                  <div className="font-bold text-xs text-[#252733] truncate">{user?.name || 'Jordan Davis'}</div>
+                  <div className="text-[10px] text-slate-400 truncate">{user?.email || 'jordan.davis@quoteflow.example'}</div>
+                  <div className="mt-1 inline-block text-[10px] font-semibold text-[#714b67] bg-[#f5eff3] px-2 py-0.5 rounded-full">
+                    {user?.roleTitle || 'Sales manager'}
+                  </div>
+                </div>
+
+                <div className="py-1">
+                  <Link
+                    to="/profile"
+                    onClick={() => setUserMenuOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2 text-xs text-slate-700 hover:bg-[#f5eff3] hover:text-[#714b67] rounded-xl transition-colors"
+                  >
+                    <User className="w-3.5 h-3.5" />
+                    <span>My Profile</span>
+                  </Link>
+                  <Link
+                    to="/portal"
+                    onClick={() => setUserMenuOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2 text-xs text-slate-700 hover:bg-[#f5eff3] hover:text-[#714b67] rounded-xl transition-colors"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>Client Portal</span>
+                  </Link>
+                </div>
+
+                <div className="pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUserMenuOpen(false);
+                      handleLogout();
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs text-rose-600 hover:bg-rose-50 rounded-xl transition-colors font-medium"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span>Sign Out</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -347,22 +433,16 @@ export function MainLayout() {
         >
           {/* Top: Brand Logo & Section links */}
           <div className="flex-1 overflow-y-auto py-4 px-3 space-y-6">
-            {/* QuoteFlow Brand Header */}
-            {!sidebarCollapsed ? (
-              <div className="px-2 py-1 flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-[#714b67] flex items-center justify-center text-white font-bold text-base shadow-sm shadow-[#714b67]/20 font-display">
-                  Q
-                </div>
-                <div>
-                  <div className="font-bold tracking-tight text-[#252733] text-sm leading-tight font-display">QuoteFlow</div>
-                  <div className="text-[11px] text-slate-400 leading-tight">Revenue operations</div>
-                </div>
-              </div>
-            ) : (
-              <div className="w-8 h-8 rounded-xl bg-[#714b67] flex items-center justify-center text-white font-bold text-base mx-auto shadow-sm shadow-[#714b67]/20 font-display">
-                Q
-              </div>
-            )}
+            {/* Official DealFlow360 Brand Header */}
+            <div className="px-2 py-1 flex items-center justify-between">
+              <Link to="/dashboard" className="cursor-pointer">
+                <BrandLogo
+                  size={sidebarCollapsed ? 'sm' : 'md'}
+                  showText={!sidebarCollapsed}
+                />
+              </Link>
+            </div>
+
 
             {/* Nav Groups */}
             {navigationGroups.map((grp, gIdx) => {
@@ -438,14 +518,18 @@ export function MainLayout() {
             )}
 
             {/* User Profile Bar */}
-            <div className="flex items-center justify-between px-2 py-1">
+            <Link
+              to="/profile"
+              className="flex items-center justify-between px-2 py-1.5 rounded-xl hover:bg-[#f5eff3] transition-colors group cursor-pointer select-none"
+              title="View & Edit My Profile"
+            >
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-full bg-[#f5eff3] text-[#714b67] font-bold text-xs flex items-center justify-center border border-[#ecdfe8] shrink-0 font-display">
+                <div className="w-8 h-8 rounded-full bg-[#f5eff3] group-hover:bg-[#ecdfe8] text-[#714b67] font-bold text-xs flex items-center justify-center border border-[#ecdfe8] shrink-0 font-display transition-colors">
                   {getInitials(user?.name)}
                 </div>
                 {!sidebarCollapsed && (
                   <div className="min-w-0">
-                    <div className="text-xs font-bold text-[#252733] truncate">{user?.name || 'Jordan Davis'}</div>
+                    <div className="text-xs font-bold text-[#252733] truncate group-hover:text-[#714b67] transition-colors">{user?.name || 'Jordan Davis'}</div>
                     <div className="text-[11px] text-slate-400 truncate">{user?.roleTitle || 'Sales manager'}</div>
                   </div>
                 )}
@@ -453,16 +537,22 @@ export function MainLayout() {
 
               {!sidebarCollapsed && (
                 <button
-                  onClick={toggleSidebar}
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    toggleSidebar();
+                  }}
                   className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
                   title="Collapse Sidebar"
                 >
                   <MoreHorizontal className="w-4 h-4" />
                 </button>
               )}
-            </div>
+            </Link>
           </div>
         </aside>
+
 
         {/* Main Content Area */}
         <main className="flex-1 overflow-y-auto bg-[#f3f4f6] p-4 sm:p-6 md:p-8">

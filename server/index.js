@@ -24,7 +24,7 @@ const errorHandler = require('./src/middleware/error.middleware');
 
 const app = express();
 const PORT = process.env.PORT || 5050;
-const HOST = '0.0.0.0';
+const HOST = "0.0.0.0";
 
 // Middleware
 app.use(express.json());
@@ -35,12 +35,12 @@ const getLocalIP = () => {
   const interfaces = os.networkInterfaces();
   for (const name of Object.keys(interfaces)) {
     for (const iface of interfaces[name]) {
-      if (iface.family === 'IPv4' && !iface.internal) {
+      if (iface.family === "IPv4" && !iface.internal) {
         return iface.address;
       }
     }
   }
-  return 'localhost';
+  return "localhost";
 };
 
 // Routes
@@ -63,14 +63,14 @@ app.use('/api/v1/invoices', invoiceRoutes);
 app.use('/api/v1/payments', paymentRoutes);
 app.use('/api/v1/reports', reportRoutes);
 
-app.get('/', (req, res) => {
-  res.send('Backend server is running');
+app.get("/", (req, res) => {
+  res.send("Backend server is running");
 });
 
-app.get('/health', (req, res) => {
+app.get("/health", (req, res) => {
   res.json({
     success: true,
-    message: 'Server is running'
+    message: "Server is running",
   });
 });
 
@@ -78,34 +78,38 @@ app.get('/health', (req, res) => {
 app.use(errorHandler);
 
 // Start Server
-const server = app.listen(PORT, HOST, () => {
-  const localIP = getLocalIP();
-  console.log('Server started successfully');
-  console.log(`Local URL: http://localhost:${PORT}`);
-  console.log(`Network URL: http://${localIP}:${PORT}`);
-  console.log(`Health URL: http://${localIP}:${PORT}/health`);
-}).on('error', (err) => {
-  if (err.code === 'EADDRINUSE') {
-    console.error(`Error: Port ${PORT} is already in use.`);
-  } else {
-    console.error('Server failed to start:', err.message);
-  }
-  process.exit(1);
-});
+const server = app
+  .listen(PORT, HOST, () => {
+    const localIP = getLocalIP();
+    console.log("Server started successfully");
+    console.log(`Local URL: http://localhost:${PORT}`);
+    console.log(`Network URL: http://${localIP}:${PORT}`);
+    console.log(`Health URL: http://${localIP}:${PORT}/health`);
+  })
+  .on("error", (err) => {
+    if (err.code === "EADDRINUSE") {
+      console.error(`Error: Port ${PORT} is already in use.`);
+    } else {
+      console.error("Server failed to start:", err.message);
+    }
+    process.exit(1);
+  });
 
 // Graceful Shutdown
 const shutdown = (signal) => {
   console.log(`\nReceived ${signal}. Shutting down gracefully...`);
   server.close(() => {
-    console.log('Closed out remaining connections.');
+    console.log("Closed out remaining connections.");
     process.exit(0);
   });
 
   setTimeout(() => {
-    console.error('Could not close connections in time, forcefully shutting down');
+    console.error(
+      "Could not close connections in time, forcefully shutting down",
+    );
     process.exit(1);
   }, 10000);
 };
 
-process.on('SIGTERM', () => shutdown('SIGTERM'));
-process.on('SIGINT', () => shutdown('SIGINT'));
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
