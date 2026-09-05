@@ -1,36 +1,44 @@
-import { apiClient } from './client';
+import { apiClient, delay, formatSuccessResponse } from './client';
 import { mockDb } from '../mock/mockDatabase';
 import { ApiResponse } from '../../types/api';
 import { DashboardMetrics, NeedsAttentionItem } from '../../types/analytics';
 
 export const analyticsApi = {
-  getDashboardMetrics: async (): Promise<ApiResponse<{ metrics: DashboardMetrics; needsAttention: NeedsAttentionItem[] }>> => {
+  getDashboardMetrics: async (): Promise<ApiResponse<{ metrics: DashboardMetrics; needsAttention: NeedsAttentionItem[]; serverReport?: any }>> => {
     try {
-      const res = await apiClient.get<ApiResponse<any>>('/reports/dashboard');
-      const data = res.data?.data;
-      
-      const metrics: DashboardMetrics = {
-        totalPipelineValue: data?.sales_funnel?.value_by_stage?.reduce((acc: number, curr: any) => acc + Number(curr.total_value), 0) || 0,
-        pipelineChangePercentage: 12.5, // Mocked as it's not in backend yet
-        activeDealsCount: data?.sales_funnel?.value_by_stage?.reduce((acc: number, curr: any) => acc + Number(curr.count), 0) || 0,
-        quotesAwaitingApprovalCount: 3, // Mocked
-        activeNegotiationsCount: 2, // Mocked
-        expectedMonthlyRevenue: data?.revenue_forecast?.length > 0 ? Number(data.revenue_forecast[0].expected_revenue) : 0,
-        averageGrossMarginPercentage: 32.4, // Mocked
-        atRiskDealsCount: data?.win_rate?.lost || 0,
-        pendingFulfillmentCount: 5, // Mocked
-      };
+      const response = await apiClient.get<ApiResponse<any>>('/reports/dashboard');
+      if (response.data && response.data.success && response.data.data) {
+        const report = response.data.data;
+        const mockFallback = mockDb.getDashboardMetrics();
+        
+        const totalPipeline = report.sales_funnel?.reduce((sum: number, item: any) => sum + Number(item.total_value || 0), 0) || mockFallback.metrics.totalPipelineValue;
+        const wonCount = Number(report.win_rate?.won) || 0;
+        const totalClosed = Number(report.win_rate?.total_closed) || 0;
+        const activeDeals = (report.sales_funnel?.reduce((sum: number, item: any) => sum + Number(item.count || 0), 0)) || mockFallback.metrics.activeDealsCount;
 
-      const mockNeedsAttention = mockDb.getDashboardMetrics().needsAttention;
+        const metrics: DashboardMetrics = {
+          totalPipelineValue: totalPipeline > 0 ? totalPipeline : mockFallback.metrics.totalPipelineValue,
+          pipelineChangePercentage: mockFallback.metrics.pipelineChangePercentage,
+          activeDealsCount: activeDeals > 0 ? activeDeals : mockFallback.metrics.activeDealsCount,
+          quotesAwaitingApprovalCount: mockFallback.metrics.quotesAwaitingApprovalCount,
+          activeNegotiationsCount: mockFallback.metrics.activeNegotiationsCount,
+          expectedMonthlyRevenue: report.financial_summary?.outstanding_revenue || mockFallback.metrics.expectedMonthlyRevenue,
+          averageGrossMarginPercentage: mockFallback.metrics.averageGrossMarginPercentage,
+          atRiskDealsCount: mockFallback.metrics.atRiskDealsCount,
+          pendingFulfillmentCount: mockFallback.metrics.pendingFulfillmentCount,
+        };
 
-      return {
-        success: true,
-        data: { metrics, needsAttention: mockNeedsAttention },
-        error: null,
-      };
-    } catch (err: any) {
-      // Fallback to mock on failure
-      return { success: true, data: mockDb.getDashboardMetrics(), error: null };
+        return formatSuccessResponse({
+          metrics,
+          needsAttention: mockFallback.needsAttention,
+          serverReport: report,
+        });
+      }
+    } catch (err) {
+      console.debug('Live reports/dashboard note, using calculated store:', err);
     }
+
+    await delay(150);
+    return formatSuccessResponse(mockDb.getDashboardMetrics());
   },
 };

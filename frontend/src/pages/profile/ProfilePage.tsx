@@ -33,15 +33,15 @@ export function ProfilePage({ action }: ProfileProps) {
 
 
   // Local state for personal information
-  const [firstName, setFirstName] = useState(user?.firstName || user?.name?.split(' ')[0] || 'Jordan');
-  const [lastName, setLastName] = useState(user?.lastName || user?.name?.split(' ').slice(1).join(' ') || 'Davis');
-  const [email, setEmail] = useState(user?.email || 'jordan.davis@quoteflow.example');
-  const [phone, setPhone] = useState(user?.phone || '+91 98765 43210');
-  const [jobTitle, setJobTitle] = useState(user?.jobTitle || user?.roleTitle || 'Sales manager');
+  const [firstName, setFirstName] = useState(user?.firstName || user?.name?.split(' ')[0] || '');
+  const [lastName, setLastName] = useState(user?.lastName || user?.name?.split(' ').slice(1).join(' ') || '');
+  const [email, setEmail] = useState(user?.email || '');
+  const [phone, setPhone] = useState(user?.phone || '');
+  const [jobTitle, setJobTitle] = useState(user?.jobTitle || user?.roleTitle || '');
   const [team, setTeam] = useState(user?.team || 'revenue');
   const [department, setDepartment] = useState(user?.department || 'Revenue Operations');
   const [location, setLocation] = useState(user?.location || 'Mumbai, India');
-  const [memberSince] = useState(user?.memberSince || 'January 2023');
+  const [memberSince] = useState(user?.memberSince || 'January 2024');
 
   // Preferences
   const [emailApprovals, setEmailApprovals] = useState(user?.preferences?.emailApprovals ?? true);

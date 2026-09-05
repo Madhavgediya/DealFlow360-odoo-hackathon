@@ -1,6 +1,6 @@
-require('dotenv').config();
-const express = require('express');
-const os = require('os');
+require("dotenv").config();
+const express = require("express");
+const os = require("os");
 
 const authRoutes = require('./src/modules/auth/auth.routes');
 const companyRoutes = require('./src/modules/companies/company.routes');
@@ -40,9 +40,11 @@ app.use(express.urlencoded({ extended: true }));
 // Request Logging Middleware
 app.use((req, res, next) => {
   const start = Date.now();
-  res.on('finish', () => {
+  res.on("finish", () => {
     const duration = Date.now() - start;
-    console.log(`${req.method} ${req.originalUrl} ${res.statusCode} ${duration}ms`);
+    console.log(
+      `${req.method} ${req.originalUrl} ${res.statusCode} ${duration}ms`,
+    );
   });
   next();
 });
@@ -61,24 +63,25 @@ const getLocalIP = () => {
 };
 
 // Routes
-app.use('/api/v1/auth', authRoutes);
-app.use('/api/v1/companies', companyRoutes);
-app.use('/api/v1/users', userRoutes);         // includes /users/:userId/roles/:roleId
-app.use('/api/v1/roles', roleRoutes);
-app.use('/api/v1/permissions', permissionRoutes);
-app.use('/api/v1/leads', leadRoutes);         // includes /leads/:leadId/interactions
-app.use('/api/v1/customers', customerRoutes);
-app.use('/api/v1/contacts', contactRoutes);
-app.use('/api/v1/opportunities', opportunityRoutes);
-app.use('/api/v1/activities', activityRoutes);
-app.use('/api/v1/products', productRoutes);
-app.use('/api/v1/pricing', pricingRoutes);
-app.use('/api/v1/quotations', quotationRoutes);
-app.use('/api/v1/orders', orderRoutes);
-app.use('/api/v1/inventory', inventoryRoutes);
-app.use('/api/v1/invoices', invoiceRoutes);
-app.use('/api/v1/payments', paymentRoutes);
-app.use('/api/v1/reports', reportRoutes);
+app.use("/api/v1/auth", authRoutes);
+app.use("/api/v1/companies", companyRoutes);
+app.use("/api/v1/users", userRoutes); // includes /users/:userId/roles/:roleId
+app.use("/api/v1/roles", roleRoutes);
+app.use("/api/v1/permissions", permissionRoutes);
+app.use("/api/v1/leads", leadRoutes); // includes /leads/:leadId/interactions
+app.use("/api/v1/customers", customerRoutes);
+app.use("/api/v1/contacts", contactRoutes);
+app.use("/api/v1/opportunities", opportunityRoutes);
+app.use("/api/v1/activities", activityRoutes);
+app.use("/api/v1/products", productRoutes);
+app.use("/api/v1/pricing", pricingRoutes);
+app.use("/api/v1/quotations", quotationRoutes);
+app.use("/api/v1/orders", orderRoutes);
+app.use("/api/v1/inventory", inventoryRoutes);
+app.use("/api/v1/invoices", invoiceRoutes);
+app.use("/api/v1/payments", paymentRoutes);
+app.use("/api/v1/reports", reportRoutes);
+app.use("/api/v1/ai", aiRoutes);
 
 app.get("/", (req, res) => {
   res.send("Backend server is running");

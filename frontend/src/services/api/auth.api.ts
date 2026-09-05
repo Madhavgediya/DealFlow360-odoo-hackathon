@@ -97,6 +97,40 @@ export const authApi = {
   },
 
   /**
+   * Master Impersonation endpoint against POST /api/v1/auth/impersonate
+   */
+  async impersonate(payload: { targetUserId?: string; email?: string }): Promise<ApiResponse<{ token: string; user: User }>> {
+    try {
+      const response = await apiClient.post<ApiResponse<{ token: string; user: any }>>('/auth/impersonate', payload);
+      if (response.data && response.data.success && response.data.data) {
+        const { token, user: rawUser } = response.data.data;
+        const user = enrichServerUser(rawUser);
+        if (token) {
+          localStorage.setItem('dealflow360_jwt', token);
+        }
+        useAuthStore.getState().login(user, token);
+        return formatSuccessResponse({ token, user }, undefined, response.data.message || 'Impersonated successfully');
+      }
+    } catch (err: any) {
+      console.warn('Backend impersonation fallback:', err);
+    }
+
+    // Fallback local matching
+    const cleanEmail = (payload.email || payload.targetUserId || 'jordan.davis@quoteflow.example').toLowerCase().trim();
+    const matchedRole = (Object.keys(DEMO_USERS) as UserRole[]).find(
+      (r) => DEMO_USERS[r].email.toLowerCase() === cleanEmail || DEMO_USERS[r].id === payload.targetUserId
+    );
+    const user: User = (matchedRole && DEMO_USERS[matchedRole]) ? DEMO_USERS[matchedRole] : {
+      ...DEMO_USERS.ADMIN,
+      id: payload.targetUserId || `usr-master-${Date.now()}`,
+      name: cleanEmail.split('@')[0].replace('.', ' ').toUpperCase(),
+      email: cleanEmail,
+    };
+    useAuthStore.getState().login(user, 'impersonate-token');
+    return formatSuccessResponse({ token: 'impersonate-token', user }, undefined, 'Impersonation active');
+  },
+
+  /**
    * Register a new user account against server POST /api/v1/auth/signup
    */
   async signup(data: { name: string; email: string; password: string; role?: string }): Promise<ApiResponse<{ user: User }>> {
