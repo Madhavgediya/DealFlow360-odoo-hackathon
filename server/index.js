@@ -1,6 +1,8 @@
 require('dotenv').config();
 const express = require('express');
 const os = require('os');
+const authRoutes = require('./src/modules/auth/auth.routes');
+const errorHandler = require('./src/middleware/error.middleware');
 
 const app = express();
 const PORT = process.env.PORT || 5050;
@@ -24,6 +26,8 @@ const getLocalIP = () => {
 };
 
 // Routes
+app.use('/api/v1/auth', authRoutes);
+
 app.get('/', (req, res) => {
   res.send('Backend server is running');
 });
@@ -34,6 +38,9 @@ app.get('/health', (req, res) => {
     message: 'Server is running'
   });
 });
+
+// Error handling middleware (must be after routes)
+app.use(errorHandler);
 
 // Start Server
 const server = app.listen(PORT, HOST, () => {
