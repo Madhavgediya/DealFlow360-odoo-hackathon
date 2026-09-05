@@ -34,6 +34,7 @@ const authenticateFactory = (expectedAudience = 'app') => async (req, res, next)
     }
 
     req.user = user;
+    req.tokenPayload = decoded;
     next();
   } catch (error) {
     if (error.name === 'TokenExpiredError') {

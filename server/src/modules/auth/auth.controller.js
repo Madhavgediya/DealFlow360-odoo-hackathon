@@ -60,9 +60,35 @@ const logout = (req, res) => {
   res.status(200).json({ success: true, message: 'Logged out successfully' });
 };
 
+const impersonate = async (req, res, next) => {
+  try {
+    const { targetUserId } = req.body;
+    
+    // Call the service with target user ID, requester user object, and requester token payload
+    const result = await authService.impersonate(targetUserId, req.user, req.tokenPayload);
+    
+    // Send back the delegated token in a secure cookie exactly like signin
+    res.cookie('dealflow360_jwt', result.token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 1000 // 1 hour for impersonation token
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Impersonation session started successfully',
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   signup,
   signin,
   getMe,
-  logout
+  logout,
+  impersonate
 };
