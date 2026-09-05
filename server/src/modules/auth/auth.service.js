@@ -35,7 +35,7 @@ const signup = async (userData) => {
   return newUser;
 };
 
-const signin = async (credentials) => {
+const signin = async (credentials, audience = 'app') => {
   const { email, password } = credentials;
   
   const normalizedEmail = email.toLowerCase().trim();
@@ -66,7 +66,9 @@ const signin = async (credentials) => {
   // Generate JWT
   const payload = {
     sub: user.id,
-    role: user.role
+    role: user.role,
+    company_id: user.company_id,
+    aud: audience
   };
 
   const token = jwt.sign(payload, process.env.JWT_SECRET, {

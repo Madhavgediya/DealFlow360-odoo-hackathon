@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 const authRepository = require('../modules/auth/auth.repository');
 
-const authenticate = async (req, res, next) => {
+const authenticateFactory = (expectedAudience = 'app') => async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -14,6 +14,12 @@ const authenticate = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+    // Check audience
+    if (decoded.aud !== expectedAudience) {
+      return res.status(403).json({ success: false, message: 'Invalid token audience' });
+    }
+
     const user = await authRepository.findUserById(decoded.sub);
 
     if (!user) {
@@ -38,4 +44,7 @@ const authenticate = async (req, res, next) => {
   }
 };
 
-module.exports = { authenticate };
+const authenticate = authenticateFactory('app');
+const authenticatePortal = authenticateFactory('portal');
+
+module.exports = { authenticate, authenticatePortal, authenticateFactory };

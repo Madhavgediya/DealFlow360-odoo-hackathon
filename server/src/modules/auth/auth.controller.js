@@ -19,7 +19,8 @@ const signup = async (req, res, next) => {
 
 const signin = async (req, res, next) => {
   try {
-    const result = await authService.signin(req.body);
+    const audience = req.body.audience || 'app';
+    const result = await authService.signin(req.body, audience);
     
     res.status(200).json({
       success: true,
