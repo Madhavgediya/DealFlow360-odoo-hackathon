@@ -22,6 +22,13 @@ const signin = async (req, res, next) => {
     const audience = req.body.audience || 'app';
     const result = await authService.signin(req.body, audience);
     
+    res.cookie('dealflow360_jwt', result.token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    });
+
     res.status(200).json({
       success: true,
       message: 'Signed in successfully',
@@ -44,24 +51,33 @@ const getMe = async (req, res, next) => {
   }
 };
 
+const logout = (req, res) => {
+  res.clearCookie('dealflow360_jwt', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+  });
+  res.status(200).json({ success: true, message: 'Logged out successfully' });
+};
+
 const impersonate = async (req, res, next) => {
   try {
-    const { targetUserId, email } = req.body;
-    const result = await authService.impersonate({ targetUserId, email }, req.user);
+    const { targetUserId } = req.body;
     
-    // Set cookie if needed
-    if (result.token) {
-      res.cookie('dealflow360_jwt', result.token, {
-        httpOnly: false,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 2 * 60 * 60 * 1000
-      });
-    }
+    // Call the service with target user ID, requester user object, and requester token payload
+    const result = await authService.impersonate(targetUserId, req.user, req.tokenPayload);
+    
+    // Send back the delegated token in a secure cookie exactly like signin
+    res.cookie('dealflow360_jwt', result.token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 1000 // 1 hour for impersonation token
+    });
 
     res.status(200).json({
       success: true,
-      message: 'Impersonated successfully',
+      message: 'Impersonation session started successfully',
       data: result
     });
   } catch (error) {
@@ -73,5 +89,6 @@ module.exports = {
   signup,
   signin,
   getMe,
+  logout,
   impersonate
 };

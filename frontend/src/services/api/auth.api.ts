@@ -74,7 +74,7 @@ export const authApi = {
   /**
    * Sign in user with credentials against server POST /api/v1/auth/signin
    */
-  async signin(credentials: { email: string; password: string }): Promise<ApiResponse<{ token: string; user: User }>> {
+  async signin(credentials: { email: string; password: string }): Promise<ApiResponse<{ user: User }>> {
     try {
       const response = await apiClient.post<ApiResponse<{ token: string; user: any }>>('/auth/signin', {
         email: credentials.email.trim(),
@@ -82,32 +82,17 @@ export const authApi = {
       });
 
       if (response.data && response.data.success && response.data.data) {
-        const { token, user: rawUser } = response.data.data;
+        const { user: rawUser } = response.data.data;
         const user = enrichServerUser(rawUser);
         
-        if (token) {
-          localStorage.setItem('dealflow360_jwt', token);
-        }
-        
-        useAuthStore.getState().login(user, token);
-        return formatSuccessResponse({ token, user }, undefined, response.data.message || 'Signed in successfully');
+        useAuthStore.getState().login(user);
+        return formatSuccessResponse({ user }, undefined, response.data.message || 'Signed in successfully');
       }
 
       return formatErrorResponse(response.data?.message || 'Authentication failed');
     } catch (err: any) {
       const serverMsg = err.response?.data?.message || err.response?.data?.error;
-      if (serverMsg) {
-        return formatErrorResponse(serverMsg);
-      }
-      
-      console.warn('Backend signin offline/unreachable, falling back to local persona session:', err);
-      // If server is not reachable, fallback to demo user
-      const fallbackRole: UserRole = 'ADMIN';
-      const fallbackUser = DEMO_USERS[fallbackRole];
-      const token = `jwt-fallback-${Date.now()}`;
-      localStorage.setItem('dealflow360_jwt', token);
-      useAuthStore.getState().login(fallbackUser, token);
-      return formatSuccessResponse({ token, user: fallbackUser }, undefined, 'Signed in with demo profile');
+      return formatErrorResponse(serverMsg || 'Network Error: Unable to connect to server');
     }
   },
 
@@ -148,7 +133,7 @@ export const authApi = {
   /**
    * Register a new user account against server POST /api/v1/auth/signup
    */
-  async signup(data: { name: string; email: string; password: string; role?: string }): Promise<ApiResponse<{ token: string; user: User }>> {
+  async signup(data: { name: string; email: string; password: string; role?: string }): Promise<ApiResponse<{ user: User }>> {
     try {
       const normalizedEmail = data.email.toLowerCase().trim();
       const response = await apiClient.post<ApiResponse<any>>('/auth/signup', {
@@ -169,40 +154,13 @@ export const authApi = {
           return formatSuccessResponse(signinRes.data, undefined, 'User created and signed in successfully');
         }
 
-        const safeUser = enrichServerUser(response.data.data);
-        const token = `jwt-${Date.now()}`;
-        localStorage.setItem('dealflow360_jwt', token);
-        useAuthStore.getState().login(safeUser, token);
-        return formatSuccessResponse({ token, user: safeUser }, undefined, 'Account created successfully');
+        return formatErrorResponse('Signup succeeded but auto-signin failed.');
       }
 
       return formatErrorResponse(response.data?.message || 'Registration failed');
     } catch (err: any) {
       const serverMsg = err.response?.data?.message || err.response?.data?.error;
-      if (serverMsg) {
-        return formatErrorResponse(serverMsg);
-      }
-
-      console.warn('Backend signup unreachable, using local fallback registration:', err);
-      const [firstName = '', ...rest] = data.name.split(' ');
-      const fallbackUser: User = {
-        id: `usr-${Date.now()}`,
-        name: data.name,
-        firstName,
-        lastName: rest.join(' '),
-        email: data.email,
-        role: (data.role as any) || 'SALES_REP',
-        roleTitle: ROLE_LABELS[(data.role as UserRole) || 'SALES_REP'] || 'Sales Rep',
-        companyId: 'comp-1',
-        permissions: ROLE_PERMISSIONS[(data.role as UserRole) || 'SALES_REP'] || [],
-        status: 'ACTIVE',
-        memberSince: 'Today',
-        twoFactorEnabled: false,
-      };
-      const token = `jwt-${Date.now()}`;
-      localStorage.setItem('dealflow360_jwt', token);
-      useAuthStore.getState().login(fallbackUser, token);
-      return formatSuccessResponse({ token, user: fallbackUser }, undefined, 'Registered locally (demo mode)');
+      return formatErrorResponse(serverMsg || 'Network Error: Unable to connect to server');
     }
   },
 
@@ -211,10 +169,12 @@ export const authApi = {
    */
   async logout(): Promise<ApiResponse<null>> {
     try {
-      localStorage.removeItem('dealflow360_jwt');
+      await apiClient.post('/auth/logout');
       useAuthStore.getState().logout();
     } catch (err) {
       console.warn('Logout error:', err);
+      // Still log out locally even if API fails
+      useAuthStore.getState().logout();
     }
     return formatSuccessResponse(null, undefined, 'Logged out successfully');
   },
@@ -224,12 +184,6 @@ export const authApi = {
    */
   async getProfile(): Promise<ApiResponse<User>> {
     try {
-      const token = localStorage.getItem('dealflow360_jwt');
-      if (!token || token.startsWith('jwt-fallback') || token === 'jwt-demo-token-dealflow360') {
-        const currentUser = useAuthStore.getState().user || DEMO_USERS.ADMIN;
-        return formatSuccessResponse(currentUser);
-      }
-
       const response = await apiClient.get<ApiResponse<any>>('/auth/me');
       if (response.data && response.data.success && response.data.data) {
         const user = enrichServerUser(response.data.data);
@@ -237,15 +191,14 @@ export const authApi = {
         return formatSuccessResponse(user);
       }
 
-      const currentUser = useAuthStore.getState().user || DEMO_USERS.ADMIN;
-      return formatSuccessResponse(currentUser);
+      useAuthStore.getState().logout();
+      return formatErrorResponse('Failed to fetch profile');
     } catch (err: any) {
-      // If token expired or invalid (401), clear invalid token
+      useAuthStore.getState().logout();
       if (err.response?.status === 401) {
-        console.info('Session token expired or invalid on server');
+        return formatErrorResponse('Session expired');
       }
-      const currentUser = useAuthStore.getState().user || DEMO_USERS.ADMIN;
-      return formatSuccessResponse(currentUser);
+      return formatErrorResponse('Network Error: Unable to connect to server');
     }
   },
 
@@ -267,27 +220,11 @@ export const authApi = {
         }
         return response.data;
       }
-    } catch (err) {
-      console.warn('Backend updateProfile fallback:', err);
+      return formatErrorResponse('Profile update failed');
+    } catch (err: any) {
+      const serverMsg = err.response?.data?.message || err.response?.data?.error;
+      return formatErrorResponse(serverMsg || 'Network Error: Unable to connect to server');
     }
-
-    const currentUser = useAuthStore.getState().user || DEMO_USERS.ADMIN;
-    const computedName = payload.name || `${payload.firstName || ''} ${payload.lastName || ''}`.trim() || currentUser.name;
-    const updatedUser: User = {
-      ...currentUser,
-      ...payload,
-      name: computedName,
-      firstName: payload.firstName || currentUser.firstName,
-      lastName: payload.lastName || currentUser.lastName,
-      email: payload.email || currentUser.email,
-      phone: payload.phone || currentUser.phone,
-      jobTitle: payload.jobTitle || currentUser.jobTitle,
-      department: payload.department || currentUser.department,
-      team: payload.team || currentUser.team,
-      location: payload.location || currentUser.location,
-    };
-    useAuthStore.getState().setUser(updatedUser);
-    return formatSuccessResponse(updatedUser, undefined, 'Profile changes saved successfully');
   },
 
   /**
@@ -297,9 +234,9 @@ export const authApi = {
     try {
       const response = await apiClient.put<ApiResponse<{ message: string }>>('/auth/password', payload);
       return response.data;
-    } catch (err) {
-      console.warn('Backend changePassword fallback:', err);
-      return formatSuccessResponse({ message: 'Password updated successfully' }, undefined, 'Password updated successfully');
+    } catch (err: any) {
+      const serverMsg = err.response?.data?.message || err.response?.data?.error;
+      return formatErrorResponse(serverMsg || 'Network Error: Unable to connect to server');
     }
   },
 
@@ -322,20 +259,11 @@ export const authApi = {
         }
         return response.data;
       }
-    } catch (err) {
-      console.warn('Backend updatePreferences fallback:', err);
+      return formatErrorResponse('Preferences update failed');
+    } catch (err: any) {
+      const serverMsg = err.response?.data?.message || err.response?.data?.error;
+      return formatErrorResponse(serverMsg || 'Network Error: Unable to connect to server');
     }
-
-    const currentUser = useAuthStore.getState().user;
-    if (currentUser) {
-      const merged = { ...currentUser.preferences, ...preferences };
-      useAuthStore.getState().setUser({
-        ...currentUser,
-        preferences: merged,
-      });
-      return formatSuccessResponse(merged, undefined, 'Notification preferences updated');
-    }
-    return formatSuccessResponse(preferences, undefined, 'Notification preferences updated');
   },
 
   /**
@@ -354,19 +282,11 @@ export const authApi = {
         }
         return response.data;
       }
-    } catch (err) {
-      console.warn('Backend toggle2FA fallback:', err);
+      return formatErrorResponse('2FA toggle failed');
+    } catch (err: any) {
+      const serverMsg = err.response?.data?.message || err.response?.data?.error;
+      return formatErrorResponse(serverMsg || 'Network Error: Unable to connect to server');
     }
-
-    const currentUser = useAuthStore.getState().user;
-    const nextVal = enable !== undefined ? enable : !(currentUser?.twoFactorEnabled);
-    if (currentUser) {
-      useAuthStore.getState().setUser({
-        ...currentUser,
-        twoFactorEnabled: nextVal,
-      });
-    }
-    return formatSuccessResponse({ twoFactorEnabled: nextVal }, undefined, `Two-factor authentication ${nextVal ? 'enabled' : 'disabled'}`);
   },
 };
 

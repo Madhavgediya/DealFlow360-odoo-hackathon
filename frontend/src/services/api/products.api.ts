@@ -175,7 +175,7 @@ export const productsApi = {
   },
 
   getCategories: async (): Promise<ApiResponse<ProductCategory[]>> => {
-    await delay(100);
-    return formatSuccessResponse(mockDb.getCategories());
+    // Backend currently doesn't have a categories endpoint, so we return mock data
+    return { success: true, data: mockDb.getCategories(), error: null };
   },
 };
