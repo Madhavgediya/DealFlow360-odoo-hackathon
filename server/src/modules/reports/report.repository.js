@@ -2,7 +2,7 @@ const db = require('../../config/database');
 
 const getSalesFunnel = async (company_id) => {
   const query = `
-    SELECT stage, COUNT(id) as count, SUM(expected_value) as total_value
+    SELECT stage, COUNT(id) as count, SUM(amount) as total_value
     FROM opportunities
     WHERE company_id = $1
     GROUP BY stage
@@ -16,7 +16,7 @@ const getRevenueForecast = async (company_id) => {
   const query = `
     SELECT 
       TO_CHAR(expected_close_date, 'YYYY-MM') as month,
-      SUM(expected_value * (probability / 100.0)) as projected_revenue
+      SUM(amount * (probability / 100.0)) as projected_revenue
     FROM opportunities
     WHERE company_id = $1 AND stage NOT IN ('CLOSED_WON', 'CLOSED_LOST') AND expected_close_date IS NOT NULL
     GROUP BY TO_CHAR(expected_close_date, 'YYYY-MM')
