@@ -28,11 +28,22 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'product.view', 'customer.view', 'customer.negotiate',
     'inventory.view', 'vendor.view', 'deal_health.view', 'ai.use'
   ],
+  FINANCE: [
+    'quote.view', 'quote.approve', 'quote.confirm',
+    'discount.override', 'cost.view', 'margin.view', 'risk.view',
+    'product.view', 'customer.view', 'billing.view', 'billing.manage', 'subscription.manage',
+    'procurement.create', 'procurement.manage', 'procurement.view', 'deal_health.view', 'analytics.view', 'ai.use'
+  ],
   FINANCE_DIRECTOR: [
     'quote.view', 'quote.approve', 'quote.confirm',
     'discount.override', 'cost.view', 'margin.view', 'risk.view',
     'product.view', 'customer.view', 'billing.view', 'billing.manage', 'subscription.manage',
     'procurement.create', 'procurement.manage', 'procurement.view', 'deal_health.view', 'analytics.view', 'ai.use'
+  ],
+  OPERATIONS: [
+    'quote.view', 'product.view', 'inventory.view', 'inventory.allocate',
+    'vendor.view', 'vendor.compare', 'procurement.create', 'procurement.manage', 'procurement.view',
+    'fulfillment.manage', 'shipping.manage', 'ai.use'
   ],
   WAREHOUSE_MANAGER: [
     'quote.view', 'product.view', 'inventory.view', 'inventory.allocate',
@@ -51,7 +62,9 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   ADMIN: 'System Administrator',
   SALES_MANAGER: 'Sales Director / Manager',
   SALES_REP: 'Account Executive / Sales Rep',
-  FINANCE_DIRECTOR: 'CFO / Finance Controller',
+  FINANCE: 'Finance & Billing Director',
+  FINANCE_DIRECTOR: 'Finance & Billing Director',
+  OPERATIONS: 'Operations & Fulfillment Lead',
   WAREHOUSE_MANAGER: 'Head of Inventory & Warehouses',
   PROCUREMENT_LEAD: 'Procurement & Supply Specialist',
   CUSTOMER: 'Client / Portal Contact'
@@ -68,3 +81,4 @@ export function hasRole(user: User | null | undefined, roles: UserRole | UserRol
   const roleList = Array.isArray(roles) ? roles : [roles];
   return roleList.includes(user.role);
 }
+

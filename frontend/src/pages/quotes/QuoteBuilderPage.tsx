@@ -216,9 +216,12 @@ export function QuoteBuilderPage() {
       queryClient.invalidateQueries({ queryKey: ['quote', id] });
       queryClient.invalidateQueries({ queryKey: ['quotes'] });
       queryClient.invalidateQueries({ queryKey: ['approvals'] });
-      setQuoteStatus(res.data.status);
+      if (res.data?.status) {
+        setQuoteStatus(res.data.status);
+      }
       toast.success('Quote updated and risk re-evaluated!');
     },
+
   });
 
   const confirmMutation = useMutation({

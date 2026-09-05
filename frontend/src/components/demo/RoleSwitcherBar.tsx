@@ -8,12 +8,11 @@ export function RoleSwitcherBar() {
   const navigate = useNavigate();
 
   const roles: { role: UserRole; label: string; desc: string }[] = [
-    { role: 'ADMIN', label: 'Admin', desc: 'Full System Access' },
-    { role: 'SALES_MANAGER', label: 'Sales Director', desc: 'Approvals & Margins' },
-    { role: 'SALES_REP', label: 'Sales Rep', desc: 'CRM & Quotes' },
-    { role: 'FINANCE_DIRECTOR', label: 'CFO', desc: 'Financial Approvals & Billing' },
-    { role: 'WAREHOUSE_MANAGER', label: 'Warehouse Head', desc: 'Inventory & Stock' },
-    { role: 'PROCUREMENT_LEAD', label: 'Procurement', desc: 'Vendor Intelligence & POs' },
+    { role: 'ADMIN', label: 'Admin', desc: 'Full System Access & Settings' },
+    { role: 'SALES_MANAGER', label: 'Sales Director', desc: 'Approvals & Discount Overrides' },
+    { role: 'SALES_REP', label: 'Sales Rep', desc: 'CRM Pipeline & CPQ Quotes' },
+    { role: 'FINANCE', label: 'Finance / CFO', desc: 'Margin Approvals & Invoicing' },
+    { role: 'OPERATIONS', label: 'Operations & Logistics', desc: 'Inventory, Warehouses & POs' },
     { role: 'CUSTOMER', label: 'Customer Portal', desc: 'Client View (Zero Margin Leak)' },
   ];
 
@@ -35,7 +34,7 @@ export function RoleSwitcherBar() {
 
       <div className="flex items-center gap-1">
         {roles.map((r) => {
-          const isActive = user?.role === r.role;
+          const isActive = user?.role === r.role || (r.role === 'FINANCE' && user?.role === 'FINANCE_DIRECTOR') || (r.role === 'OPERATIONS' && (user?.role === 'WAREHOUSE_MANAGER' || user?.role === 'PROCUREMENT_LEAD'));
           return (
             <button
               key={r.role}
@@ -55,3 +54,4 @@ export function RoleSwitcherBar() {
     </div>
   );
 }
+

@@ -24,8 +24,11 @@ import { InvoicesPage } from '../pages/billing/InvoicesPage';
 import { InvoiceDetailPage } from '../pages/billing/InvoiceDetailPage';
 import { DealHealthPage } from '../pages/deal-health/DealHealthPage';
 import { AnalyticsPage } from '../pages/analytics/AnalyticsPage';
+import { ProfilePage } from '../pages/profile/ProfilePage';
 import { LoginPage } from '../pages/auth/LoginPage';
+import { RegisterPage } from '../pages/auth/RegisterPage';
 import { PortalDashboardPage } from '../pages/portal/PortalDashboardPage';
+
 import { PortalProductsPage } from '../pages/portal/PortalProductsPage';
 import { PortalQuotesPage } from '../pages/portal/PortalQuotesPage';
 import { PortalQuoteDetailPage } from '../pages/portal/PortalQuoteDetailPage';
@@ -38,9 +41,14 @@ export const router = createBrowserRouter([
     path: '/login',
     element: <LoginPage />,
   },
+  {
+    path: '/register',
+    element: <RegisterPage />,
+  },
   // Main ERP Layout Routes
   {
     path: '/',
+
     element: <MainLayout />,
     children: [
       {
@@ -161,6 +169,15 @@ export const router = createBrowserRouter([
         path: 'analytics',
         element: <AnalyticsPage />,
       },
+      // Profile & Account Management
+      {
+        path: 'profile',
+        element: <ProfilePage />,
+      },
+      {
+        path: 'settings/profile',
+        element: <ProfilePage />,
+      },
     ],
   },
   // Customer Portal Layout Routes (Isolated)
@@ -172,6 +189,11 @@ export const router = createBrowserRouter([
         index: true,
         element: <PortalDashboardPage />,
       },
+      {
+        path: 'profile',
+        element: <ProfilePage />,
+      },
+
       {
         path: 'products',
         element: <PortalProductsPage />,

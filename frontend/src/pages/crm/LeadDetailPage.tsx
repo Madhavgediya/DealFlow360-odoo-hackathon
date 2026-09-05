@@ -65,8 +65,11 @@ export function LeadDetailPage() {
 
       toast.success('Lead converted to Customer and 7-Day Trial activated!');
       setIsConvertWizardOpen(false);
-      navigate(`/customers/${res.data.customer.id}`);
+      if (res.data?.customer?.id) {
+        navigate(`/customers/${res.data.customer.id}`);
+      }
     },
+
     onError: (err: any) => {
       toast.error(err.message || 'Failed to convert lead');
     },

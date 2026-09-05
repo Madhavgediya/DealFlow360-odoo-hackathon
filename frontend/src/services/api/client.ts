@@ -2,11 +2,12 @@ import axios from 'axios';
 import { ApiResponse } from '../../types/api';
 
 export const apiClient = axios.create({
-  baseURL: '/api/v1',
+  baseURL: import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api/v1` : '/api/v1',
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
 
 // Intercept requests to attach Company & JWT tokens
 apiClient.interceptors.request.use((config) => {
@@ -34,7 +35,7 @@ export function formatSuccessResponse<T>(data: T, meta?: any, message?: string):
   };
 }
 
-export function formatErrorResponse(errorMsg: string): ApiResponse<null> {
+export function formatErrorResponse<T = any>(errorMsg: string): ApiResponse<T> {
   return {
     success: false,
     data: null,
@@ -42,3 +43,4 @@ export function formatErrorResponse(errorMsg: string): ApiResponse<null> {
     error: errorMsg,
   };
 }
+
