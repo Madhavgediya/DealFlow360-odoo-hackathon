@@ -56,7 +56,7 @@ export class GlobalErrorBoundary extends React.Component<Props, State> {
                 size="sm"
                 onClick={() => {
                   this.setState({ hasError: false, error: null });
-                  window.location.href = '/dashboard';
+                  window.location.href = '/login';
                 }}
                 className="gap-1.5"
               >

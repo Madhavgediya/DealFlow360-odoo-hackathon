@@ -24,6 +24,7 @@ import {
   Clock,
   ArrowRight,
 } from 'lucide-react';
+import { A4DocumentPrintModal } from '../../components/print/A4DocumentPrintModal';
 
 export function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -31,6 +32,7 @@ export function InvoiceDetailPage() {
   const queryClient = useQueryClient();
   const { currency } = useAuthStore();
 
+  const [printModalOpen, setPrintModalOpen] = React.useState(false);
   const [paymentModalOpen, setPaymentModalOpen] = React.useState(false);
   const [payAmount, setPayAmount] = React.useState<number>(0);
   const [payMethod, setPayMethod] = React.useState<string>('BANK_TRANSFER');
@@ -94,7 +96,7 @@ export function InvoiceDetailPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => window.print()}
+            onClick={() => setPrintModalOpen(true)}
             className="gap-1.5 border-slate-200 hover:bg-slate-50 text-[#252733] font-sans"
           >
             <Printer className="w-4 h-4" />
@@ -256,6 +258,35 @@ export function InvoiceDetailPage() {
           </div>
         </div>
       </Dialog>
+
+      {/* A4 Document Print Modal */}
+      <A4DocumentPrintModal
+        isOpen={printModalOpen}
+        onClose={() => setPrintModalOpen(false)}
+        documentType="INVOICE"
+        documentNumber={invoice.invoiceNumber}
+        status={invoice.status}
+        issueDate={invoice.issueDate}
+        validUntilOrDueDate={invoice.dueDate}
+        paymentTerms={invoice.paymentTerms}
+        currency={currency}
+        customerName={invoice.customerName}
+        lines={invoice.lines.map((l) => ({
+          id: l.id,
+          description: l.description,
+          quantity: l.quantity,
+          unitPrice: l.unitPrice,
+          discountPercentage: l.discountPercentage,
+          taxRate: l.taxRate,
+          lineTotal: l.amount,
+        }))}
+        subtotal={invoice.lines.reduce((a, b) => a + b.unitPrice * b.quantity, 0)}
+        discountTotal={invoice.lines.reduce((a, b) => a + (b.unitPrice * b.quantity * b.discountPercentage) / 100, 0)}
+        taxTotal={invoice.taxTotal || (invoice.totalAmount * 18) / 118}
+        totalAmount={invoice.totalAmount}
+        amountPaid={invoice.amountPaid}
+        amountDue={invoice.amountDue}
+      />
     </div>
   );
 }

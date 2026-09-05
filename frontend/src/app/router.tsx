@@ -24,9 +24,14 @@ import { InvoicesPage } from '../pages/billing/InvoicesPage';
 import { InvoiceDetailPage } from '../pages/billing/InvoiceDetailPage';
 import { DealHealthPage } from '../pages/deal-health/DealHealthPage';
 import { AnalyticsPage } from '../pages/analytics/AnalyticsPage';
+import { AICopilotPage } from '../pages/ai/AICopilotPage';
 import { ProfilePage } from '../pages/profile/ProfilePage';
 import { LoginPage } from '../pages/auth/LoginPage';
 import { RegisterPage } from '../pages/auth/RegisterPage';
+import { LandingPage } from '../pages/landing/LandingPage';
+import { DocsPage } from '../pages/docs/DocsPage';
+import { AdminUsersPage } from '../pages/admin/AdminUsersPage';
+import { ProtectedRoute } from '../components/auth/ProtectedRoute';
 import { PortalDashboardPage } from '../pages/portal/PortalDashboardPage';
 
 import { PortalProductsPage } from '../pages/portal/PortalProductsPage';
@@ -38,6 +43,14 @@ import { PortalSubscriptionsPage } from '../pages/portal/PortalSubscriptionsPage
 
 export const router = createBrowserRouter([
   {
+    path: '/',
+    element: <LandingPage />,
+  },
+  {
+    path: '/docs',
+    element: <DocsPage />,
+  },
+  {
     path: '/login',
     element: <LoginPage />,
   },
@@ -45,16 +58,14 @@ export const router = createBrowserRouter([
     path: '/register',
     element: <RegisterPage />,
   },
-  // Main ERP Layout Routes
+  // Main ERP Layout Routes (Protected with Auth Guard)
   {
-    path: '/',
-
-    element: <MainLayout />,
+    element: (
+      <ProtectedRoute>
+        <MainLayout />
+      </ProtectedRoute>
+    ),
     children: [
-      {
-        index: true,
-        element: <Navigate to="/dashboard" replace />,
-      },
       {
         path: 'dashboard',
         element: <DashboardPage />,
@@ -169,6 +180,10 @@ export const router = createBrowserRouter([
         path: 'analytics',
         element: <AnalyticsPage />,
       },
+      {
+        path: 'ai-copilot',
+        element: <AICopilotPage />,
+      },
       // Profile & Account Management
       {
         path: 'profile',
@@ -178,12 +193,24 @@ export const router = createBrowserRouter([
         path: 'settings/profile',
         element: <ProfilePage />,
       },
+      {
+        path: 'settings/users',
+        element: (
+          <ProtectedRoute requiredRole="ADMIN">
+            <AdminUsersPage />
+          </ProtectedRoute>
+        ),
+      },
     ],
   },
-  // Customer Portal Layout Routes (Isolated)
+  // Customer Portal Layout Routes (Isolated & Protected)
   {
     path: '/portal',
-    element: <PortalLayout />,
+    element: (
+      <ProtectedRoute>
+        <PortalLayout />
+      </ProtectedRoute>
+    ),
     children: [
       {
         index: true,

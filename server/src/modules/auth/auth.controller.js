@@ -44,8 +44,34 @@ const getMe = async (req, res, next) => {
   }
 };
 
+const impersonate = async (req, res, next) => {
+  try {
+    const { targetUserId, email } = req.body;
+    const result = await authService.impersonate({ targetUserId, email }, req.user);
+    
+    // Set cookie if needed
+    if (result.token) {
+      res.cookie('dealflow360_jwt', result.token, {
+        httpOnly: false,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 2 * 60 * 60 * 1000
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Impersonated successfully',
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   signup,
   signin,
-  getMe
+  getMe,
+  impersonate
 };

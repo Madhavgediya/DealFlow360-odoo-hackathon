@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   ArrowRight,
   UserCircle,
+  Sparkles,
 } from 'lucide-react';
 import { cn } from '../../utils/formatting';
 
@@ -48,6 +49,7 @@ export function CommandPalette() {
   const results = React.useMemo<CommandPaletteItem[]>(() => {
     if (!query) {
       return [
+        { id: 'quick-ai', title: 'DealFlow360 AI Copilot Hub', subtitle: 'Interactive RAG Assistant, Change Monitor, and What-If Simulator', category: 'AI Intelligence', icon: <Sparkles className="w-4 h-4 text-[#714b67]" />, route: '/ai-copilot' },
         { id: 'quick-profile', title: 'My Profile & Account Management', subtitle: 'Manage personal info, security, 2FA, and preferences', category: 'Account', icon: <UserCircle className="w-4 h-4 text-[#714b67]" />, route: '/profile' },
         { id: 'quick-quotes', title: 'Quotations & Pipeline', category: 'Navigation', icon: <FileText className="w-4 h-4 text-[#714b67]" />, route: '/sales/quotes' },
         { id: 'quick-approvals', title: 'Approval Inbox (Pending)', category: 'Navigation', icon: <ShieldCheck className="w-4 h-4 text-[#714b67]" />, route: '/approvals' },

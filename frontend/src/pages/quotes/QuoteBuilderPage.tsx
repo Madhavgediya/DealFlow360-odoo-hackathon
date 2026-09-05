@@ -28,8 +28,10 @@ import {
   Lock,
   Building,
   Boxes,
+  Printer,
 } from 'lucide-react';
 import { cn } from '../../utils/formatting';
+import { A4DocumentPrintModal } from '../../components/print/A4DocumentPrintModal';
 
 export function QuoteBuilderPage() {
   const { id } = useParams<{ id: string }>();
@@ -38,6 +40,7 @@ export function QuoteBuilderPage() {
   const queryClient = useQueryClient();
   const { currency, user } = useAuthStore();
 
+  const [printModalOpen, setPrintModalOpen] = React.useState(false);
   const canViewCost = can(user, 'cost.view');
 
   // Fetch products & customers
@@ -257,15 +260,26 @@ export function QuoteBuilderPage() {
         </div>          {/* Top Actions */}
         <div className="flex items-center gap-2 flex-wrap">
           {!isNew && (
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => navigate(`/sales/negotiations/${id || 'q-1024'}`)}
-              className="gap-1.5 bg-white text-[#252733] border-[#e5e7eb] hover:bg-[#f3f4f6]"
-            >
-              <Repeat className="w-4 h-4 text-[#714b67]" />
-              Negotiation Diff View
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPrintModalOpen(true)}
+                className="gap-1.5 border-slate-200 hover:bg-slate-50 text-[#252733] font-sans"
+              >
+                <Printer className="w-4 h-4 text-[#714b67]" />
+                Print A4 / PDF
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => navigate(`/sales/negotiations/${id || 'q-1024'}`)}
+                className="gap-1.5 bg-white text-[#252733] border-[#e5e7eb] hover:bg-[#f3f4f6]"
+              >
+                <Repeat className="w-4 h-4 text-[#714b67]" />
+                Negotiation Diff View
+              </Button>
+            </>
           )}
 
           <Button
@@ -609,6 +623,36 @@ export function QuoteBuilderPage() {
           </Card>
         </div>
       </div>
+
+      {/* A4 Document Print Modal */}
+      <A4DocumentPrintModal
+        isOpen={printModalOpen}
+        onClose={() => setPrintModalOpen(false)}
+        documentType="QUOTATION"
+        documentNumber={quoteData?.data?.quoteNumber || 'Q-1024'}
+        status={quoteStatus}
+        issueDate={quoteData?.data?.createdAt || new Date().toISOString()}
+        validUntilOrDueDate={validUntil}
+        paymentTerms={paymentTerms}
+        currency={currency}
+        customerName={customers.find((c) => c.id === customerId)?.name || 'Enterprise Customer'}
+        lines={lines.map((l) => ({
+          id: l.id,
+          description: l.productName,
+          sku: l.productSku,
+          quantity: l.quantity,
+          unitPrice: l.unitPrice,
+          discountPercentage: l.discountPercentage,
+          taxRate: l.taxRate,
+          lineTotal: l.lineTotal,
+        }))}
+        subtotal={subtotal}
+        discountTotal={totalDiscountAmount}
+        taxTotal={totalTaxAmount}
+        totalAmount={totalAmount}
+        salespersonName={user?.name || 'Sales Executive'}
+        notes="Commercial proposal is valid for 30 calendar days from the date of issuance. All hardware includes standard 3-year enterprise manufacturer warranty and 24/7 technical assistance SLA."
+      />
     </div>
   );
 }

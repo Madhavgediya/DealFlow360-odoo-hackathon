@@ -49,7 +49,7 @@ export function DemoTourBar() {
   return (
     <div className="bg-white border-b border-[#e5e7eb] text-[#252733] px-4 py-2 text-xs flex flex-col md:flex-row items-center justify-between gap-3 shadow-subtle relative z-40">
       {/* Left: Step indicator */}
-      <div className="flex items-center gap-2 flex-wrap">
+      {/* <div className="flex items-center gap-2 flex-wrap">
         <span className="px-2 py-0.5 rounded-full bg-[#f5eff3] text-[#714b67] font-bold uppercase tracking-wider text-[10px] border border-[#ecdfe8]">
           Tour ({currentStepIndex + 1}/{HERO_DEMO_STEPS.length})
         </span>
@@ -57,10 +57,10 @@ export function DemoTourBar() {
         <span className="hidden lg:inline-block text-slate-500">
           — {currentStep.description}
         </span>
-      </div>
+      </div> */}
 
       {/* Right: Actions & Role indication */}
-      <div className="flex items-center gap-2 shrink-0">
+      {/* <div className="flex items-center gap-2 shrink-0">
         <div className="hidden sm:flex items-center gap-1.5 text-[11px] bg-[#f3f4f6] px-2 py-1 rounded-lg border border-[#e5e7eb]">
           <span className="text-slate-500">Target Role:</span>
           <span className="font-bold text-[#714b67] font-mono">{currentStep.recommendedRole}</span>
@@ -96,7 +96,7 @@ export function DemoTourBar() {
         >
           <X className="w-4 h-4" />
         </button>
-      </div>
+      </div> */}
     </div>
   );
 }

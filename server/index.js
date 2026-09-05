@@ -1,41 +1,46 @@
-require('dotenv').config();
-const express = require('express');
-const os = require('os');
+require("dotenv").config();
+const express = require("express");
+const os = require("os");
 
-const authRoutes = require('./src/modules/auth/auth.routes');
-const companyRoutes = require('./src/modules/companies/company.routes');
-const userRoutes = require('./src/modules/users/user.routes');
-const roleRoutes = require('./src/modules/roles/role.routes');
-const permissionRoutes = require('./src/modules/permissions/permission.routes');
-const leadRoutes = require('./src/modules/leads/lead.routes');
-const customerRoutes = require('./src/modules/customers/customer.routes');
-const contactRoutes = require('./src/modules/contacts/contact.routes');
-const opportunityRoutes = require('./src/modules/opportunities/opportunity.routes');
-const activityRoutes = require('./src/modules/activities/activity.routes');
-const productRoutes = require('./src/modules/products/product.routes');
-const pricingRoutes = require('./src/modules/pricing/pricing.routes');
-const quotationRoutes = require('./src/modules/quotations/quotation.routes');
-const orderRoutes = require('./src/modules/orders/order.routes');
-const inventoryRoutes = require('./src/modules/inventory/inventory.routes');
-const invoiceRoutes = require('./src/modules/invoices/invoice.routes');
-const paymentRoutes = require('./src/modules/payments/payment.routes');
-const reportRoutes = require('./src/modules/reports/report.routes');
-const errorHandler = require('./src/middleware/error.middleware');
+const authRoutes = require("./src/modules/auth/auth.routes");
+const companyRoutes = require("./src/modules/companies/company.routes");
+const userRoutes = require("./src/modules/users/user.routes");
+const roleRoutes = require("./src/modules/roles/role.routes");
+const permissionRoutes = require("./src/modules/permissions/permission.routes");
+const leadRoutes = require("./src/modules/leads/lead.routes");
+const customerRoutes = require("./src/modules/customers/customer.routes");
+const contactRoutes = require("./src/modules/contacts/contact.routes");
+const opportunityRoutes = require("./src/modules/opportunities/opportunity.routes");
+const activityRoutes = require("./src/modules/activities/activity.routes");
+const productRoutes = require("./src/modules/products/product.routes");
+const pricingRoutes = require("./src/modules/pricing/pricing.routes");
+const quotationRoutes = require("./src/modules/quotations/quotation.routes");
+const orderRoutes = require("./src/modules/orders/order.routes");
+const inventoryRoutes = require("./src/modules/inventory/inventory.routes");
+const invoiceRoutes = require("./src/modules/invoices/invoice.routes");
+const paymentRoutes = require("./src/modules/payments/payment.routes");
+const reportRoutes = require("./src/modules/reports/report.routes");
+const aiRoutes = require("./src/modules/ai/ai.routes");
+const errorHandler = require("./src/middleware/error.middleware");
+const cors = require("cors");
 
 const app = express();
 const PORT = process.env.PORT || 5050;
 const HOST = "0.0.0.0";
 
 // Middleware
+app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Request Logging Middleware
 app.use((req, res, next) => {
   const start = Date.now();
-  res.on('finish', () => {
+  res.on("finish", () => {
     const duration = Date.now() - start;
-    console.log(`${req.method} ${req.originalUrl} ${res.statusCode} ${duration}ms`);
+    console.log(
+      `${req.method} ${req.originalUrl} ${res.statusCode} ${duration}ms`,
+    );
   });
   next();
 });
@@ -54,24 +59,25 @@ const getLocalIP = () => {
 };
 
 // Routes
-app.use('/api/v1/auth', authRoutes);
-app.use('/api/v1/companies', companyRoutes);
-app.use('/api/v1/users', userRoutes);         // includes /users/:userId/roles/:roleId
-app.use('/api/v1/roles', roleRoutes);
-app.use('/api/v1/permissions', permissionRoutes);
-app.use('/api/v1/leads', leadRoutes);         // includes /leads/:leadId/interactions
-app.use('/api/v1/customers', customerRoutes);
-app.use('/api/v1/contacts', contactRoutes);
-app.use('/api/v1/opportunities', opportunityRoutes);
-app.use('/api/v1/activities', activityRoutes);
-app.use('/api/v1/products', productRoutes);
-app.use('/api/v1/pricing', pricingRoutes);
-app.use('/api/v1/quotations', quotationRoutes);
-app.use('/api/v1/orders', orderRoutes);
-app.use('/api/v1/inventory', inventoryRoutes);
-app.use('/api/v1/invoices', invoiceRoutes);
-app.use('/api/v1/payments', paymentRoutes);
-app.use('/api/v1/reports', reportRoutes);
+app.use("/api/v1/auth", authRoutes);
+app.use("/api/v1/companies", companyRoutes);
+app.use("/api/v1/users", userRoutes); // includes /users/:userId/roles/:roleId
+app.use("/api/v1/roles", roleRoutes);
+app.use("/api/v1/permissions", permissionRoutes);
+app.use("/api/v1/leads", leadRoutes); // includes /leads/:leadId/interactions
+app.use("/api/v1/customers", customerRoutes);
+app.use("/api/v1/contacts", contactRoutes);
+app.use("/api/v1/opportunities", opportunityRoutes);
+app.use("/api/v1/activities", activityRoutes);
+app.use("/api/v1/products", productRoutes);
+app.use("/api/v1/pricing", pricingRoutes);
+app.use("/api/v1/quotations", quotationRoutes);
+app.use("/api/v1/orders", orderRoutes);
+app.use("/api/v1/inventory", inventoryRoutes);
+app.use("/api/v1/invoices", invoiceRoutes);
+app.use("/api/v1/payments", paymentRoutes);
+app.use("/api/v1/reports", reportRoutes);
+app.use("/api/v1/ai", aiRoutes);
 
 app.get("/", (req, res) => {
   res.send("Backend server is running");

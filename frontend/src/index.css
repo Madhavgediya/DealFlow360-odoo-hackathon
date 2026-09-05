@@ -373,3 +373,72 @@
   cursor: pointer;
 }
 
+/* ==========================================================================
+   A4 Professional Document Print Styles
+   ========================================================================== */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm 15mm;
+  }
+
+  html, body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    font-size: 10pt !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Hide all application chrome, navigation, overlays, buttons, drawers */
+  header,
+  aside,
+  nav,
+  .no-print,
+  .demo-bar,
+  .role-bar,
+  [role="dialog"] > div:first-child, /* Dialog backdrop overlay */
+  [role="region"],
+  [data-sonner-toaster],
+  button:not(.allow-print) {
+    display: none !important;
+  }
+
+  /* Reset layout constraints */
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    background: #ffffff !important;
+  }
+
+  /* Target the A4 document sheet */
+  .print-document {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+  }
+
+  /* Prevent awkward page breaks */
+  table, tr, td, th, .page-break-avoid {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  thead {
+    display: table-header-group !important;
+  }
+
+  tfoot {
+    display: table-footer-group !important;
+  }
+}
+

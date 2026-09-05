@@ -34,7 +34,7 @@ import { Subscription, SubscriptionPlan, ProrationPreview } from '../../types/su
 import { Invoice, PaymentRecord } from '../../types/billing';
 import { DealHealthOverview, DealHealthItem } from '../../types/dealHealth';
 import { DashboardMetrics, NeedsAttentionItem } from '../../types/analytics';
-import { AIChatMessage } from '../../types/ai';
+import { AIChatMessage, DynamicChangeRecord, WhatIfSimulationResult } from '../../types/ai';
 import { calculateRiskAssessment } from '../../utils/risk';
 
 class MockDatabase {
@@ -100,6 +100,31 @@ class MockDatabase {
 
   public getLeadById(id: string): Lead | undefined {
     return this.leads.find((l) => l.id === id);
+  }
+
+  public addLead(lead: Lead): Lead {
+    this.leads.unshift(lead);
+    return lead;
+  }
+
+  public addCustomer(customer: Customer): Customer {
+    this.customers.unshift(customer);
+    return customer;
+  }
+
+  public addProduct(product: Product): Product {
+    this.products.unshift(product);
+    return product;
+  }
+
+  public addWarehouse(wh: Warehouse): Warehouse {
+    this.warehouses.unshift(wh);
+    return wh;
+  }
+
+  public addStockItem(item: StockItem): StockItem {
+    this.stockItems.unshift(item);
+    return item;
   }
 
   public convertLeadToCustomer(payload: LeadConversionPayload): { customer: Customer; subscription?: Subscription } {
@@ -990,124 +1015,294 @@ class MockDatabase {
     };
   }
 
-  // --- AI COPILOT RAG ENGINE ---
-  public queryAI(prompt: string): AIChatMessage {
+  // --- AI COPILOT RAG ENGINE (DYNAMIC CLIENT-SIDE BACKED BY LIVE REPO STATE) ---
+  public queryAI(prompt: string, contextEntity?: { type: string; id: string; title: string }): AIChatMessage {
     const q = prompt.toLowerCase();
-    const heroQuote = this.getQuoteById('q-1024');
 
-    if (q.includes('q-1024') || q.includes('blocked') || q.includes('approval')) {
+    // 1. If asking about a specific Quote or active context is QUOTE
+    const quoteIdMatch = q.match(/q-\d+/i);
+    const targetQuoteId = quoteIdMatch ? quoteIdMatch[0].toLowerCase() : (contextEntity?.type === 'QUOTE' ? contextEntity.id : null);
+
+    if (targetQuoteId) {
+      const quote = this.getQuoteById(targetQuoteId);
+      if (quote) {
+        const approval = this.approvals.find(a => a.quoteId === quote.id);
+        const margin = quote.grossMarginPercentage || 0;
+        const discount = quote.discountPercentage || 0;
+        const isBlocked = quote.status === 'APPROVAL_REQUIRED' || quote.status === 'REAPPROVAL_REQUIRED';
+
+        let analysis = `**Quote ${quote.quoteNumber} Analysis (${quote.customerName})**:\n`;
+        analysis += `- **Total Deal Value**: ₹ ${(quote.totalAmount || 0).toLocaleString()}\n`;
+        analysis += `- **Current Status**: \`${quote.status}\` (Revision: \`v${quote.currentRevisionNumber}\`)\n`;
+        analysis += `- **Overall Discount**: **${discount.toFixed(1)}%** | **Gross Margin**: **${margin.toFixed(1)}%**\n`;
+        analysis += `- **Risk Score**: **${quote.riskAssessment?.overallScore || 45} / 100** (\`${quote.riskAssessment?.overallSeverity || 'MEDIUM'}\`)\n\n`;
+
+        if (isBlocked) {
+          analysis += `⚠️ **Approval Blocker Detected**:
+${quote.reapprovalReason || `Discount of ${discount.toFixed(1)}% exceeds standard rep policy (10.0%) and margin is below 18.0% hurdle rate.`}
+Required Approvers: **Sales Director (Vikram Mehta)** & **Finance Director (Rajesh Singhania)**.`;
+        } else {
+          analysis += `✅ **Policy Compliance**: Deal pricing is within authorized sales guidelines. Ready for customer signature or order conversion.`;
+        }
+
+        return {
+          id: `ai-${Date.now()}`,
+          sender: 'ASSISTANT',
+          text: analysis,
+          timestamp: new Date().toISOString(),
+          confidenceScore: 98,
+          sources: [
+            {
+              title: `Quote ${quote.quoteNumber} Live Ledger`,
+              type: 'QUOTE_RISK',
+              referenceId: quote.id,
+              excerpt: `Subtotal: ₹ ${quote.subtotal?.toLocaleString()}, Discount: ${discount.toFixed(1)}%, Margin: ${margin.toFixed(1)}%`,
+            },
+            {
+              title: 'Discount Governance Policy CAT-LAPTOPS-01',
+              type: 'POLICY',
+              excerpt: 'Discretionary ceiling: 10.0% max. Hurdle rate: 18.0% minimum gross margin.',
+            }
+          ],
+          dataUsed: {
+            quoteNumber: quote.quoteNumber,
+            customer: quote.customerName,
+            totalAmount: quote.totalAmount,
+            discount: `${discount.toFixed(1)}%`,
+            margin: `${margin.toFixed(1)}%`,
+            status: quote.status,
+          },
+          followUpQuestions: [
+            `Would you like to simulate a ${Math.max(5, discount - 4).toFixed(0)}% discount to auto-approve without VP sign-off?`,
+            `Should I draft an approval escalation justification note for Vikram Mehta?`,
+            `Do you want to inspect line item cost breakdown and warehouse stock?`
+          ],
+          suggestedActions: [
+            {
+              label: `Open Quote ${quote.quoteNumber}`,
+              actionType: 'NAVIGATE',
+              payload: { quoteId: quote.id },
+              route: `/sales/quotes/${quote.id}`,
+            },
+            ...(approval ? [{
+              label: 'Inspect Approval Chain',
+              actionType: 'NAVIGATE' as const,
+              payload: { approvalId: approval.id },
+              route: `/approvals/${approval.id}`,
+            }] : []),
+            {
+              label: 'Compare Negotiation Diffs',
+              actionType: 'NAVIGATE',
+              payload: { quoteId: quote.id },
+              route: `/sales/negotiations/${quote.id}`,
+            }
+          ]
+        };
+      }
+    }
+
+    // 2. Questions about Changes / Audit Trail / What happened
+    if (
+      q.includes('change') ||
+      q.includes('audit') ||
+      q.includes('modified') ||
+      q.includes('history') ||
+      q.includes('revision') ||
+      q.includes('who updated')
+    ) {
+      const changes = this.getDynamicChanges().slice(0, 4);
+      const summaryText = changes.map((c, i) => 
+        `${i + 1}. **${c.action}** on \`${c.entityType}\` (${c.entityId.slice(0, 8)}) by **${c.userName}** (${c.userRole})\n   *Impact*: ${c.aiImpactSummary}`
+      ).join('\n\n');
+
       return {
         id: `ai-${Date.now()}`,
         sender: 'ASSISTANT',
-        text: `**Quote Q-1024** is currently in **APPROVAL_REQUIRED** status due to two policy violations:
-
-1. **Category Discount Limit Exceeded**: Requested discount of **18.0%** on UltraBook Pro X1 Carbon exceeds the category ceiling of **10.0%** by **+8.0%**.
-2. **Gross Margin Compression**: Deal gross margin dropped to **16.5%**, which is below the corporate hurdle rate of **18.0%**.
-
-The approval chain currently requires sign-off from **Sales Director (Vikram Mehta)** and **Finance Director (Rajesh Singhania)**.`,
+        text: `**Live Change & Audit Stream (Real-Time State)**:\n\n${summaryText}\n\n*All system state diffs are cryptographically logged with immutable timestamps.*`,
         timestamp: new Date().toISOString(),
         confidenceScore: 99,
-        sources: [
-          {
-            title: 'Category Discount Governance Policy (Rule CAT-LAPTOPS-01)',
-            type: 'POLICY',
-            referenceId: 'cat-1',
-            excerpt: 'Category "Enterprise Laptops" maximum rep discretionary discount is 10.0%. Any excess triggers Sales Director sign-off.',
-          },
-          {
-            title: 'Quote Q-1024 Risk Assessment Engine',
-            type: 'QUOTE_RISK',
-            referenceId: 'q-1024',
-            excerpt: 'Overall Risk Score: 78 (HIGH). Discount Risk: CRITICAL (18% applied). Margin Risk: HIGH (16.5% vs 18% floor).',
-          },
+        sources: changes.map(c => ({
+          title: `Audit Event: ${c.action} by ${c.userName}`,
+          type: 'STOCK_AUDIT',
+          referenceId: c.id,
+          excerpt: c.reason || c.aiImpactSummary,
+        })),
+        dataUsed: { totalLoggedEvents: changes.length },
+        followUpQuestions: [
+          'Would you like to compare the before/after state diff of the latest quote revision?',
+          'Do you want to see all changes made to a specific customer or deal?',
+          'Should I scan for any pending re-approvals triggered by recent concessions?'
         ],
-        dataUsed: {
-          quoteNumber: 'Q-1024',
-          discount: '18.0%',
-          allowedLimit: '10.0%',
-          margin: '16.5%',
-          minMargin: '18.0%',
-          pendingApprover: 'Vikram Mehta (Sales Director)',
-        },
         suggestedActions: [
           {
-            label: 'Review Approval in Inbox',
+            label: 'Open AI Change Monitor',
             actionType: 'NAVIGATE',
-            payload: { quoteId: 'q-1024' },
-            route: '/approvals/appr-1024',
+            payload: {},
+            route: '/ai-copilot',
           },
           {
-            label: 'View Negotiation Diff',
+            label: 'View Approvals Inbox',
             actionType: 'NAVIGATE',
-            payload: { quoteId: 'q-1024' },
-            route: '/sales/negotiations/q-1024',
-          },
-        ],
+            payload: {},
+            route: '/approvals',
+          }
+        ]
       };
     }
 
-    if (q.includes('vendor') || q.includes('shortage') || q.includes('laptop') || q.includes('procure')) {
+    // 3. Questions about Inventory, Warehouses, Stock Shortages
+    if (
+      q.includes('inventory') ||
+      q.includes('stock') ||
+      q.includes('shortage') ||
+      q.includes('warehouse') ||
+      q.includes('laptop') ||
+      q.includes('storage') ||
+      q.includes('server')
+    ) {
+      const shortageItems = this.stockItems.filter(s => s.quantityAvailable <= s.reorderPoint);
+      const topStock = this.stockItems.slice(0, 4);
+
+      let stockText = `**Real-Time Stock & Warehouse Inventory**:\n\n`;
+      topStock.forEach(s => {
+        stockText += `- **${s.productName}** (\`${s.warehouseName}\`): **${s.quantityAvailable}** Available (${s.quantityOnHand} On Hand, ${s.quantityReserved} Reserved)\n`;
+      });
+
+      if (shortageItems.length > 0) {
+        stockText += `\n⚠️ **Shortage Alert**: **${shortageItems[0].productName}** in ${shortageItems[0].warehouseName} is below reorder point (${shortageItems[0].quantityAvailable} available vs ${shortageItems[0].reorderPoint} min).`;
+      }
+
       return {
         id: `ai-${Date.now()}`,
         sender: 'ASSISTANT',
-        text: `For the **UltraBook Pro X1 Carbon** inventory deficit, I recommend selecting **Precision Silicon Distributing Ltd (Vendor A)**.
-
-**Analysis:**
-- **Lead Time**: 2 Days (vs 5 Days from Velocity Networks)
-- **Fulfillment Reliability**: 96% Score
-- **Unit Cost**: ₹ 125,000 (saves ₹ 3,000 per unit compared to baseline)
-- **Current Status**: In Stock & Preferred Partner`,
+        text: stockText,
         timestamp: new Date().toISOString(),
         confidenceScore: 97,
         sources: [
           {
-            title: 'Vendor Performance Matrix (VEN-PSD-01)',
-            type: 'VENDOR_SCORE',
-            referenceId: 'ven-1',
-            excerpt: 'Precision Silicon Distributing maintains 99% on-time delivery rate with 2-day SLAs in Gujarat & Maharashtra.',
-          },
+            title: 'Live Warehouse Stock Matrix',
+            type: 'STOCK_AUDIT',
+            excerpt: `${this.stockItems.length} inventory records across Mumbai, Bengaluru, Delhi, and Pune hubs.`,
+          }
         ],
         dataUsed: {
-          recommendedVendor: 'Precision Silicon Distributing Ltd',
-          leadTime: '2 Days',
-          reliabilityScore: 96,
-          unitCost: 125000,
+          totalStockSKUs: this.stockItems.length,
+          shortages: shortageItems.length,
         },
+        followUpQuestions: [
+          'Should I recommend the fastest vendor for procurement (Precision Silicon vs Velocity)?',
+          'Would you like to initiate a warehouse transfer from Mumbai to Bengaluru?',
+          'Do you want to auto-create a draft Purchase Order for stock replenishment?'
+        ],
         suggestedActions: [
           {
-            label: 'Compare Vendors Side-by-Side',
+            label: 'Inspect Stock Ledger',
             actionType: 'NAVIGATE',
-            payload: { productId: 'prod-1' },
-            route: '/vendors',
+            payload: {},
+            route: '/inventory/stock',
           },
           {
-            label: 'Generate Purchase Order',
+            label: 'Compare Sourcing Vendors',
             actionType: 'NAVIGATE',
-            payload: { vendorId: 'ven-1' },
-            route: '/procurement/purchase-orders',
-          },
-        ],
+            payload: {},
+            route: '/vendors',
+          }
+        ]
       };
     }
 
-    if (q.includes('risk') || q.includes('stalled') || q.includes('deal health')) {
+    // 4. Questions about Leads, CRM, Pipeline
+    if (
+      q.includes('lead') ||
+      q.includes('pipeline') ||
+      q.includes('crm') ||
+      q.includes('hot') ||
+      q.includes('prospect')
+    ) {
+      const hotLeads = this.leads.filter(l => l.stage === 'QUALIFIED' || l.score >= 75);
+      const topLeads = this.leads.slice(0, 4);
+
+      let leadText = `**CRM Pipeline Intelligence (${this.leads.length} Total Leads)**:\n\n`;
+      leadText += `- **High-Value / Qualified Leads**: **${hotLeads.length}** ready for closing\n\n`;
+      topLeads.forEach(l => {
+        leadText += `- **${l.firstName} ${l.lastName}** (${l.companyName}): Score **${l.score}** (\`${l.stage}\`), Budget: ₹ ${(l.budget || 0).toLocaleString()}\n`;
+      });
+
       return {
         id: `ai-${Date.now()}`,
         sender: 'ASSISTANT',
-        text: `Currently tracking **2 deals requiring attention**:
-
-1. **Razorpay Financial Tech (Q-1021)**: Stalled for **5 days** due to warehouse inventory shortage (Health Score: 42 - AT RISK).
-2. **Quantum Cloud Corp (Q-1024)**: Margin compression to 16.5% awaiting CFO sign-off (Health Score: 68 - WATCH).
-
-Total pipeline revenue at risk: **₹ 4,627,130**.`,
+        text: leadText,
         timestamp: new Date().toISOString(),
-        confidenceScore: 95,
+        confidenceScore: 96,
+        sources: [
+          {
+            title: 'CRM Lead Qualification & Velocity Model',
+            type: 'DEAL_HEALTH',
+            excerpt: 'Dynamic scoring across requirement fit, budget authority, and engagement touchpoints.',
+          }
+        ],
+        dataUsed: {
+          totalLeads: this.leads.length,
+          hotLeadsCount: hotLeads.length,
+        },
+        followUpQuestions: [
+          'Would you like to auto-generate a tailored proposal for the top lead?',
+          'Should I schedule an automated follow-up reminder for new leads?',
+          'Do you want to see conversion win-rate projections by lead source?'
+        ],
+        suggestedActions: [
+          {
+            label: 'View Leads Pipeline',
+            actionType: 'NAVIGATE',
+            payload: {},
+            route: '/crm/leads',
+          },
+          {
+            label: 'Create New Quotation',
+            actionType: 'NAVIGATE',
+            payload: {},
+            route: '/sales/quotes/new',
+          }
+        ]
+      };
+    }
+
+    // 5. Questions about Deal Health, Risk, Stalled Deals
+    if (
+      q.includes('risk') ||
+      q.includes('health') ||
+      q.includes('stalled') ||
+      q.includes('deal')
+    ) {
+      const atRisk = this.quotes.filter(q => (q.riskAssessment?.overallScore || 0) >= 60);
+
+      let healthText = `**Deal Health & Risk Sentinel Summary**:\n\n`;
+      healthText += `Currently tracking **${atRisk.length} deals** requiring active intervention:\n\n`;
+      atRisk.forEach((r, idx) => {
+        healthText += `${idx + 1}. **${r.customerName} (${r.quoteNumber})**: Risk Score **${r.riskAssessment?.overallScore}** (\`${r.riskAssessment?.overallSeverity}\`) - Margin: ${r.grossMarginPercentage?.toFixed(1)}%, Total: ₹ ${(r.totalAmount || 0).toLocaleString()}\n`;
+      });
+
+      return {
+        id: `ai-${Date.now()}`,
+        sender: 'ASSISTANT',
+        text: healthText,
+        timestamp: new Date().toISOString(),
+        confidenceScore: 97,
         sources: [
           {
             title: 'Deal Health Anomaly Detector',
             type: 'DEAL_HEALTH',
-            excerpt: 'Monitors days since last customer touchpoint, stock availability, and margin erosion.',
-          },
+            excerpt: 'Monitors days since last touchpoint, stock availability, and margin compression.',
+          }
+        ],
+        dataUsed: {
+          atRiskCount: atRisk.length,
+          totalQuotesTracked: this.quotes.length,
+        },
+        followUpQuestions: [
+          'Would you like to simulate corrective pricing to recover deal margin above 18%?',
+          'Should I notify the account executive with an action checklist for stalled deals?',
+          'Do you want to reassign the lowest-health opportunity?'
         ],
         suggestedActions: [
           {
@@ -1116,29 +1311,154 @@ Total pipeline revenue at risk: **₹ 4,627,130**.`,
             payload: {},
             route: '/deal-health',
           },
-        ],
+          {
+            label: 'Review Approvals',
+            actionType: 'NAVIGATE',
+            payload: {},
+            route: '/approvals',
+          }
+        ]
       };
     }
 
-    // Default intelligent response
+    // 6. Default Dynamic Overview
+    const pendingCount = this.approvals.filter(a => a.status === 'PENDING').length;
     return {
       id: `ai-${Date.now()}`,
       sender: 'ASSISTANT',
-      text: `Based on your query: *"I analyzed our enterprise deal records across CRM, Quotes, Inventory, and Approvals."*
+      text: `**DealFlow360 RAG Engine Ready** (Live Context Connected):
 
-- **Active Pipeline**: ₹ 48.5M across 24 qualified deals
-- **Pending Approvals**: 1 deal (Q-1024)
-- **Fulfillment**: 4 Warehouses operational with 92% on-time fulfillment rate.`,
+- **Active Pipeline**: ₹ 48.5M across ${this.quotes.length} quotations
+- **Pending Approvals**: **${pendingCount}** awaiting manager sign-off
+- **CRM Leads**: **${this.leads.length}** prospects (${this.leads.filter(l => l.score >= 80).length} High-Score)
+- **Fulfillment & Stock**: ${this.stockItems.length} SKUs across 4 distribution centers
+
+Ask me any question about deals, margin policies, inventory shortages, recent changes, or vendor comparisons!`,
       timestamp: new Date().toISOString(),
-      confidenceScore: 91,
+      confidenceScore: 95,
+      sources: [
+        {
+          title: 'DealFlow360 Unified Knowledge Graph',
+          type: 'POLICY',
+          excerpt: 'Real-time multi-tenant data sync across CRM, Sales, Inventory, and Billing.',
+        }
+      ],
+      dataUsed: {
+        quotesCount: this.quotes.length,
+        leadsCount: this.leads.length,
+        stockCount: this.stockItems.length,
+        pendingApprovals: pendingCount,
+      },
+      followUpQuestions: [
+        'Why is quote Q-1024 blocked in approval?',
+        'Which vendor should we use for the laptop stock deficit?',
+        'What changes were recently logged in the audit trail?'
+      ],
       suggestedActions: [
         {
-          label: 'View Dashboard Analytics',
+          label: 'Open AI Copilot Hub',
+          actionType: 'NAVIGATE',
+          payload: {},
+          route: '/ai-copilot',
+        },
+        {
+          label: 'View Dashboard',
           actionType: 'NAVIGATE',
           payload: {},
           route: '/dashboard',
-        },
-      ],
+        }
+      ]
+    };
+  }
+
+  // --- DYNAMIC CHANGE STREAM & AUDIT EXPLAINER ---
+  public getDynamicChanges(): DynamicChangeRecord[] {
+    const changes: DynamicChangeRecord[] = [];
+
+    // Collect quote revisions
+    this.quotes.forEach(quote => {
+      quote.revisions?.forEach((rev, idx) => {
+        changes.push({
+          id: `chg-${quote.id}-rev-${rev.revisionNumber || idx}`,
+          action: rev.changeSummary.includes('Reapproval') ? 'REAPPROVAL_TRIGGERED' : 'QUOTE_REVISED',
+          entityType: 'QUOTE',
+          entityId: quote.id,
+          userName: rev.createdBy,
+          userRole: rev.createdByRole,
+          createdAt: rev.createdAt,
+          reason: rev.changeSummary,
+          aiImpactSummary: rev.changeSummary.includes('Reapproval')
+            ? `Margin dropped to ${rev.marginPercentage?.toFixed(1)}% (Risk Score: ${rev.riskScore}), requiring VP escalation.`
+            : `Updated quotation line items to total ₹ ${rev.totalAmount?.toLocaleString()}.`,
+        });
+      });
+    });
+
+    // Collect approval audit trails
+    this.approvals.forEach(appr => {
+      appr.auditTrail?.forEach((ev, idx) => {
+        changes.push({
+          id: `chg-appr-${appr.id}-${idx}`,
+          action: ev.action,
+          entityType: 'APPROVAL',
+          entityId: appr.id,
+          userName: ev.performedBy,
+          userRole: ev.performedByRole,
+          createdAt: ev.timestamp,
+          reason: ev.comments,
+          aiImpactSummary: ev.action === 'APPROVED'
+            ? `Authorized progression for Quote ${appr.quoteNumber} (Value: ₹ ${appr.totalAmount?.toLocaleString()}).`
+            : `Approval state modified with note: "${ev.comments || 'No comment'}"`,
+        });
+      });
+    });
+
+    // Sort descending by timestamp
+    return changes.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  // --- WHAT-IF MARGIN & INVENTORY SIMULATION ---
+  public simulateWhatIf(params: {
+    basePrice?: number;
+    discountPercent?: number;
+    unitCost?: number;
+    quantity?: number;
+    productId?: string;
+  }): WhatIfSimulationResult {
+    const basePrice = params.basePrice || 128000;
+    const discountPercent = params.discountPercent ?? 15;
+    const unitCost = params.unitCost || 85000;
+    const quantity = params.quantity || 10;
+
+    const unitDiscountAmount = (basePrice * discountPercent) / 100;
+    const discountedUnitPrice = basePrice - unitDiscountAmount;
+    const revenue = discountedUnitPrice * quantity;
+    const totalCost = unitCost * quantity;
+    const grossProfit = revenue - totalCost;
+    const marginPercent = Number(((grossProfit / revenue) * 100).toFixed(1));
+
+    const maxRepDiscount = 10.0;
+    const hurdleMargin = 18.0;
+    const requiresApproval = discountPercent > maxRepDiscount || marginPercent < hurdleMargin;
+
+    return {
+      simulationType: 'MARGIN',
+      revenue,
+      totalCost,
+      grossProfit,
+      marginPercent,
+      requiresApproval,
+      thresholds: {
+        maxRepDiscount,
+        hurdleMargin,
+      },
+      recommendation: requiresApproval
+        ? `A ${discountPercent}% discount produces a ${marginPercent}% gross margin, which is below the corporate hurdle rate of ${hurdleMargin}%. This will trigger multi-tier approval from Sales & Finance Directors.`
+        : `A ${discountPercent}% discount produces a healthy ${marginPercent}% margin (above ${hurdleMargin}% floor), eligible for instant auto-approval.`,
+      followUpQuestions: [
+        `Would you like to simulate with an 8.0% discount to qualify for 1-click rep approval?`,
+        `Should I test bundling with high-margin software support (35% margin) to elevate overall deal margin?`
+      ]
     };
   }
 }

@@ -1,6 +1,7 @@
 import { formatTimeAgo, formatDateTime } from '../../utils/date';
 import { cn } from '../../utils/formatting';
-import { CheckCircle2, XCircle, AlertCircle, Clock, ArrowRight, UserCheck, Shield } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertCircle, Clock, ArrowRight, UserCheck, Shield, Sparkles } from 'lucide-react';
+import { useAIStore } from '../../stores/ai.store';
 
 export interface AuditEvent {
   action: 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'CHANGES_REQUESTED' | 'REAPPROVAL_TRIGGERED' | 'COUNTER_PROPOSAL';
@@ -16,6 +17,8 @@ export interface AuditEvent {
 }
 
 export function AuditTimeline({ events, className }: { events: AuditEvent[]; className?: string }) {
+  const { openDrawer, addMessage, setThinking } = useAIStore();
+
   if (!events || events.length === 0) {
     return <p className="text-xs text-slate-400 py-4 text-center">No audit trail records yet.</p>;
   }
@@ -29,6 +32,27 @@ export function AuditTimeline({ events, className }: { events: AuditEvent[]; cla
     COUNTER_PROPOSAL: <UserCheck className="w-4 h-4 text-[#714b67]" />,
   };
 
+  const handleAskAIAboutChange = (ev: AuditEvent) => {
+    openDrawer({
+      type: 'AUDIT',
+      id: `audit-${Date.now()}`,
+      title: `${ev.action} by ${ev.performedBy}`,
+      diffs: ev.diffs,
+    });
+
+    // Send automated prompt to Copilot
+    const diffsText = ev.diffs && ev.diffs.length > 0
+      ? ` Diffs: ${ev.diffs.map(d => `${d.field}: ${d.oldValue} -> ${d.newValue}`).join(', ')}.`
+      : '';
+    const prompt = `Explain the audit event: "${ev.action}" performed by ${ev.performedBy} (${ev.performedByRole}). Note: "${ev.comments || 'No comment'}".${diffsText}`;
+
+    // Trigger AI response in chat
+    addMessage({
+      sender: 'USER',
+      text: prompt,
+    });
+  };
+
   return (
     <div className={cn('relative space-y-4 pl-4 border-l border-slate-200 ml-2', className)}>
       {events.map((ev, index) => (
@@ -38,7 +62,7 @@ export function AuditTimeline({ events, className }: { events: AuditEvent[]; cla
             {icons[ev.action] || <Clock className="w-3.5 h-3.5 text-slate-400" />}
           </div>
 
-          <div className="bg-slate-50/70 p-3.5 rounded-xl border border-slate-200 space-y-1.5">
+          <div className="bg-slate-50/70 p-3.5 rounded-xl border border-slate-200 space-y-2">
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-1.5">
                 <span className="text-xs font-bold text-slate-900">{ev.performedBy}</span>
@@ -46,9 +70,20 @@ export function AuditTimeline({ events, className }: { events: AuditEvent[]; cla
                   {ev.performedByRole}
                 </span>
               </div>
-              <span className="text-[11px] text-slate-400 font-mono" title={formatDateTime(ev.timestamp)}>
-                {formatTimeAgo(ev.timestamp)}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] text-slate-400 font-mono" title={formatDateTime(ev.timestamp)}>
+                  {formatTimeAgo(ev.timestamp)}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleAskAIAboutChange(ev)}
+                  className="px-2 py-0.5 rounded-lg bg-white hover:bg-[#f5eff3] text-[#714b67] border border-[#ecdfe8] text-[10px] font-semibold flex items-center gap-1 transition-all"
+                  title="Ask RAG Copilot to analyze this modification"
+                >
+                  <Sparkles className="w-3 h-3 text-[#714b67]" />
+                  <span>Ask AI</span>
+                </button>
+              </div>
             </div>
 
             {ev.comments && (
