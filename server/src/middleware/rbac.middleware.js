@@ -1,16 +1,31 @@
+const isSuperAdmin = (role) => {
+  if (!role) return false;
+  const r = role.toUpperCase().trim();
+  return r === 'SUPER_ADMIN' || r === 'SUPERADMIN';
+};
+
 const requireRole = (roles) => {
   return (req, res, next) => {
     if (!req.user || !req.user.role) {
       return res.status(403).json({ success: false, message: 'Access denied: No role assigned' });
     }
 
-    if (req.user.role === 'SUPER_ADMIN') {
+    if (isSuperAdmin(req.user.role)) {
       return next();
     }
 
     const allowedRoles = Array.isArray(roles) ? roles : [roles];
+    const userRole = req.user.role.toUpperCase().trim();
     
-    if (!allowedRoles.includes(req.user.role)) {
+    const isAllowed = allowedRoles.some((r) => {
+      const targetRole = r.toUpperCase().trim();
+      if (targetRole === 'SUPER_ADMIN' || targetRole === 'SUPERADMIN') {
+        return isSuperAdmin(userRole);
+      }
+      return userRole === targetRole;
+    });
+
+    if (!isAllowed) {
       return res.status(403).json({ success: false, message: 'Access denied: Insufficient privileges' });
     }
 
@@ -25,14 +40,14 @@ const requirePermission = (moduleName, action) => {
     }
 
     // Super Admin & Company Admin override
-    if (req.user.role === 'SUPER_ADMIN' || req.user.role === 'ADMIN') {
+    if (isSuperAdmin(req.user.role) || req.user.role === 'ADMIN') {
       return next();
     }
 
     const permissions = req.user.permissions || [];
     const requiredPermission = `${moduleName}:${action}`;
     
-    // Also support wildcard matching like 'users:*' or '*:*' if we want, but for now exact or module wildcard
+    // Also support wildcard matching like 'users:*' or '*:*'
     const hasPermission = permissions.includes(requiredPermission) || 
                           permissions.includes(`${moduleName}:*`) || 
                           permissions.includes(`*:*`);
@@ -50,5 +65,7 @@ const requirePermission = (moduleName, action) => {
 
 module.exports = {
   requireRole,
-  requirePermission
+  requirePermission,
+  isSuperAdmin
 };
+

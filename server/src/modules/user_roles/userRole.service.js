@@ -11,15 +11,15 @@ const assignRole = async (userId, roleId, companyId) => {
     error.code = 'USER_NOT_FOUND';
     throw error;
   }
-  if (user.company_id !== companyId) {
+  if (user.company_id && companyId && user.company_id !== companyId) {
     const error = new Error('Cross-company access denied');
     error.statusCode = 403;
     error.code = 'CROSS_COMPANY_ACCESS_DENIED';
     throw error;
   }
 
-  // 2. Verify Role exists and belongs to company
-  const role = await roleRepository.getRoleByIdAndCompany(roleId, companyId);
+  // 2. Verify Role exists and belongs to company or is system role
+  const role = await roleRepository.getRoleByIdAndCompany(roleId, companyId || user.company_id);
   if (!role) {
     const error = new Error('Role not found');
     error.statusCode = 404;
@@ -27,16 +27,18 @@ const assignRole = async (userId, roleId, companyId) => {
     throw error;
   }
 
-  // 3. Check duplicate assignment
-  const exists = await userRoleRepository.checkUserRoleExists(userId, roleId);
-  if (exists) {
-    const error = new Error('Role already assigned to user');
-    error.statusCode = 409;
-    error.code = 'USER_ROLE_ALREADY_EXISTS';
-    throw error;
+  // 3. Assign role and sync user's role column
+  const db = require('../../config/database');
+  await db.query('DELETE FROM user_roles WHERE user_id = $1', [userId]);
+  const result = await db.query(
+    'INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2) ON CONFLICT DO NOTHING RETURNING *',
+    [userId, roleId]
+  );
+  if (role.code) {
+    await db.query('UPDATE users SET role = $1, updated_at = NOW() WHERE id = $2', [role.code, userId]);
   }
 
-  return await userRoleRepository.assignRoleToUser(userId, roleId);
+  return result.rows[0] || { user_id: userId, role_id: roleId, role };
 };
 
 const getUserRoles = async (userId, companyId) => {

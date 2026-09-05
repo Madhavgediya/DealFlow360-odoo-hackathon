@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { BrandLogo } from "../../components/common/BrandLogo";
 import { LandingThreeCanvas } from "../../components/landing/LandingThreeCanvas";
 import { authApi } from "../../services/api/auth.api";
+import { getRoleRedirectPath } from "../../utils/permissions";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Card } from "../../components/ui/card";
@@ -17,6 +18,8 @@ import {
   EyeOff,
   BarChart2,
   FileText,
+  Building2,
+  ShoppingBag,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -24,7 +27,7 @@ export function RegisterPage() {
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [role] = useState("CUSTOMER");
+  const [role, setRole] = useState("CUSTOMER");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [agreeTerms, setAgreeTerms] = useState(true);
@@ -79,11 +82,8 @@ export function RegisterPage() {
 
       if (res.success) {
         toast.success(`Welcome to DealFlow360, ${name.trim()}!`);
-        if (role === "CUSTOMER") {
-          navigate("/portal");
-        } else {
-          navigate("/dashboard");
-        }
+        const targetUrl = getRoleRedirectPath(res.data?.user?.role || role);
+        navigate(targetUrl);
       } else {
         setErrorMsg(res.error || "Failed to create account");
       }
@@ -93,6 +93,7 @@ export function RegisterPage() {
       setIsLoading(false);
     }
   };
+
 
   return (
     <div
@@ -206,6 +207,7 @@ export function RegisterPage() {
                   required
                 />
               </div>
+
 
               <div>
                 <label className="text-[#252733] font-semibold block mb-1.5 font-sans">

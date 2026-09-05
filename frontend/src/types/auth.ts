@@ -2,7 +2,9 @@ import { Company } from './api';
 
 export type UserRole =
   | 'SUPER_ADMIN'
+  | 'SUPERADMIN'
   | 'ADMIN'
+  | 'RETAILER'
   | 'SALES_REP'
   | 'SALES_MANAGER'
   | 'FINANCE'
@@ -20,19 +22,26 @@ export type Permission =
   | 'quote.submit'
   | 'quote.approve'
   | 'quote.confirm'
+  | 'quote.negotiate'
   | 'discount.override'
   | 'cost.view'
   | 'margin.view'
   | 'risk.view'
   | 'lead.view'
+  | 'lead.create'
   | 'lead.edit'
   | 'lead.qualify'
   | 'lead.convert'
+  | 'lead.manage'
   | 'product.view'
   | 'product.edit'
   | 'customer.view'
   | 'customer.edit'
   | 'customer.negotiate'
+  | 'retailer.view'
+  | 'retailer.manage'
+  | 'retailer.order'
+  | 'retailer.negotiate'
   | 'inventory.view'
   | 'inventory.allocate'
   | 'vendor.view'
@@ -48,6 +57,9 @@ export type Permission =
   | 'deal_health.view'
   | 'analytics.view'
   | 'settings.manage'
+  | 'company.manage'
+  | 'company.create'
+  | 'user.manage'
   | 'ai.use';
 
 export interface UserPreferences {
@@ -56,6 +68,16 @@ export interface UserPreferences {
   emailBillingReminders?: boolean;
   smsAlerts?: boolean;
   weeklyDigest?: boolean;
+}
+
+export interface RetailerDetails {
+  dealerCode?: string;
+  tier?: 'SILVER' | 'GOLD' | 'PLATINUM' | 'DIAMOND';
+  creditLimit?: number;
+  availableCredit?: number;
+  discountRate?: number;
+  taxRegistrationNumber?: string;
+  territory?: string;
 }
 
 export interface User {
@@ -79,8 +101,10 @@ export interface User {
   role: UserRole;
   roleTitle: string;
   companyId: string;
+  companyName?: string;
   permissions: Permission[];
   customerId?: string; // If role is CUSTOMER
+  retailerDetails?: RetailerDetails; // If role is RETAILER
 }
 
 export interface ProfileUpdatePayload {
@@ -107,4 +131,5 @@ export interface AuthSession {
   accessToken: string | null;
   isAuthenticated: boolean;
 }
+
 

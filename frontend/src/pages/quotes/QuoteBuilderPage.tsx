@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { quotesApi } from '../../services/api/quotes.api';
 import { productsApi } from '../../services/api/products.api';
@@ -8,11 +8,12 @@ import { useAuthStore } from '../../stores/auth.store';
 import { can } from '../../utils/permissions';
 import { formatCurrency } from '../../utils/currency';
 import { calculateRiskAssessment } from '../../utils/risk';
-import { QuoteLineItem, QuoteRiskAssessment } from '../../types/quote';
+import { QuoteLineItem, QuoteRiskAssessment, CreateQuotePayload } from '../../types/quote';
 import { Breadcrumbs } from '../../components/common/Breadcrumbs';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
+import { Dialog } from '../../components/ui/dialog';
 import { Input } from '../../components/ui/input';
 import { StatusBadge, RiskBadge } from '../../components/common/StatusBadge';
 import { RiskBreakdown } from '../../components/common/RiskBreakdown';
@@ -29,19 +30,28 @@ import {
   Building,
   Boxes,
   Printer,
+  Send,
+  ArrowRight,
 } from 'lucide-react';
 import { cn } from '../../utils/formatting';
 import { A4DocumentPrintModal } from '../../components/print/A4DocumentPrintModal';
 
 export function QuoteBuilderPage() {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
   const isNew = !id || id === 'new';
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { currency, user } = useAuthStore();
 
   const [printModalOpen, setPrintModalOpen] = React.useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
   const canViewCost = can(user, 'cost.view');
+
+  // URL search params from Lead conversion flow
+  const paramLeadId = searchParams.get('leadId');
+  const paramCustomerName = searchParams.get('customerName');
+  const paramCustomerId = searchParams.get('customerId');
 
   // Fetch products & customers
   const { data: productsData } = useQuery({
@@ -71,7 +81,7 @@ export function QuoteBuilderPage() {
   const [quoteStatus, setQuoteStatus] = React.useState<string>('DRAFT');
   const [revisionNumber, setRevisionNumber] = React.useState<number>(1);
 
-  // Initialize state when existing quote loads
+  // Initialize state when existing quote loads or when creating from lead
   React.useEffect(() => {
     if (quoteData?.data && !isNew) {
       const q = quoteData.data;
@@ -82,6 +92,16 @@ export function QuoteBuilderPage() {
       setQuoteStatus(q.status);
       setRevisionNumber(q.currentRevisionNumber);
     } else if (isNew && products.length > 0 && lines.length === 0) {
+      // Auto-match customer if param provided
+      if (paramCustomerId) {
+        setCustomerId(paramCustomerId);
+      } else if (paramCustomerName && customers.length > 0) {
+        const found = customers.find(c => c.name.toLowerCase().includes(paramCustomerName.toLowerCase()));
+        if (found) setCustomerId(found.id);
+      } else if (customers.length > 0) {
+        setCustomerId(customers[0].id);
+      }
+
       const firstProd = products[0];
       setLines([
         {
@@ -111,7 +131,7 @@ export function QuoteBuilderPage() {
         },
       ]);
     }
-  }, [quoteData, isNew, products]);
+  }, [quoteData, isNew, products, customers, paramCustomerId, paramCustomerName]);
 
   // Real-time Dynamic Financials & Risk Calculation
   const subtotal = lines.reduce((acc, l) => acc + l.unitPrice * l.quantity, 0);
@@ -212,7 +232,38 @@ export function QuoteBuilderPage() {
     setLines(lines.filter((_, idx) => idx !== index));
   };
 
-  // Submit mutations
+  // Create Mutation
+  const createMutation = useMutation({
+    mutationFn: () => {
+      const payload: CreateQuotePayload = {
+        customerId,
+        validUntil,
+        paymentTerms: paymentTerms as any,
+        currency: 'INR',
+        lines: lines.map((l) => ({
+          productId: l.productId,
+          quantity: l.quantity,
+          unitPrice: l.unitPrice,
+          discountPercentage: l.discountPercentage,
+          warehouseId: l.warehouseId,
+        })),
+        notes: paramLeadId ? `Generated from Lead ID ${paramLeadId}` : undefined,
+      };
+      return quotesApi.createQuote(payload, user?.id, user?.name);
+    },
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ['quotes'] });
+      toast.success(res.message || 'Quotation created successfully!');
+      if (res.data?.id) {
+        navigate(`/sales/quotes/${res.data.id}`);
+      }
+    },
+    onError: (err: any) => {
+      toast.error(err.message || 'Failed to create quotation');
+    },
+  });
+
+  // Save / Update mutations
   const updateMutation = useMutation({
     mutationFn: () => quotesApi.updateQuoteLines(id || 'q-1024', lines, user?.name, user?.roleTitle),
     onSuccess: (res) => {
@@ -224,7 +275,24 @@ export function QuoteBuilderPage() {
       }
       toast.success('Quote updated and risk re-evaluated!');
     },
+    onError: (err: any) => {
+      toast.error(err.message || 'Failed to update quotation');
+    },
+  });
 
+  const submitMutation = useMutation({
+    mutationFn: () => quotesApi.submitQuote(id || 'q-1024'),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ['quote', id] });
+      queryClient.invalidateQueries({ queryKey: ['quotes'] });
+      if (res.data?.status) {
+        setQuoteStatus(res.data.status);
+      }
+      toast.success('Quotation submitted for review / negotiation!');
+    },
+    onError: (err: any) => {
+      toast.error(err.message || 'Failed to submit quotation');
+    },
   });
 
   const confirmMutation = useMutation({
@@ -233,8 +301,24 @@ export function QuoteBuilderPage() {
       confetti({ particleCount: 100, spread: 80, origin: { y: 0.6 } });
       queryClient.invalidateQueries({ queryKey: ['quote', id] });
       queryClient.invalidateQueries({ queryKey: ['quotes'] });
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
       setQuoteStatus('CONFIRMED');
-      toast.success('Quote confirmed as WON DEAL! Order sent to Fulfillment.');
+      toast.success('Quote confirmed as WON DEAL! Order created for fulfillment.');
+    },
+    onError: (err: any) => {
+      toast.error(err.message || 'Failed to confirm deal');
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => quotesApi.deleteQuote(id || 'q-1024'),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['quotes'] });
+      toast.success('Quotation deleted');
+      navigate('/sales/quotes');
+    },
+    onError: (err: any) => {
+      toast.error(err.message || 'Failed to delete quotation');
     },
   });
 
@@ -250,14 +334,16 @@ export function QuoteBuilderPage() {
             ]}
           />
           <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
-              {isNew ? 'Create Commercial Quotation' : `${quoteData?.data?.quoteNumber} — ${quoteData?.data?.customerName}`}
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 font-display">
+              {isNew ? 'Create Commercial Quotation (CPQ)' : `${quoteData?.data?.quoteNumber} — ${quoteData?.data?.customerName}`}
             </h1>
             {!isNew && <StatusBadge status={quoteStatus} />}
             <RiskBadge severity={liveRisk.overallSeverity} score={liveRisk.overallScore} showScore />
             <span className="text-xs text-slate-400 font-mono">Revision {revisionNumber}</span>
           </div>
-        </div>          {/* Top Actions */}
+        </div>
+
+        {/* Top Actions */}
         <div className="flex items-center gap-2 flex-wrap">
           {!isNew && (
             <>
@@ -277,31 +363,66 @@ export function QuoteBuilderPage() {
                 className="gap-1.5 bg-white text-[#252733] border-[#e5e7eb] hover:bg-[#f3f4f6]"
               >
                 <Repeat className="w-4 h-4 text-[#714b67]" />
-                Negotiation Diff View
+                Negotiation Room
               </Button>
             </>
           )}
 
-          <Button
-            size="sm"
-            onClick={() => updateMutation.mutate()}
-            isLoading={updateMutation.isPending}
-            className="gap-1.5 shadow-subtle bg-[#714b67] hover:bg-[#5e3c54] text-white"
-          >
-            <ShieldCheck className="w-4 h-4" />
-            Save & Recalculate Risk
-          </Button>
-
-          {quoteStatus === 'APPROVED' && (
+          {isNew ? (
             <Button
               size="sm"
-              onClick={() => confirmMutation.mutate()}
-              isLoading={confirmMutation.isPending}
-              className="gap-1.5 bg-emerald-600 hover:bg-emerald-500 shadow-sm shadow-emerald-600/20"
+              onClick={() => createMutation.mutate()}
+              isLoading={createMutation.isPending}
+              className="gap-1.5 shadow-subtle bg-[#714b67] hover:bg-[#5e3c54] text-white"
             >
-              <CheckCircle2 className="w-4 h-4" />
-              Confirm Won Deal
+              <ShieldCheck className="w-4 h-4" />
+              Save Quotation Draft
             </Button>
+          ) : (
+            <>
+              <Button
+                size="sm"
+                onClick={() => updateMutation.mutate()}
+                isLoading={updateMutation.isPending}
+                className="gap-1.5 shadow-subtle bg-[#714b67] hover:bg-[#5e3c54] text-white"
+              >
+                <ShieldCheck className="w-4 h-4" />
+                Save & Recalculate
+              </Button>
+
+              {quoteStatus === 'DRAFT' && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => submitMutation.mutate()}
+                  isLoading={submitMutation.isPending}
+                  className="gap-1.5 border-[#ecdfe8] bg-[#f5eff3] text-[#714b67] hover:bg-[#ecdfe8]"
+                >
+                  <Send className="w-4 h-4" />
+                  Submit for Approval
+                </Button>
+              )}
+
+              {(quoteStatus === 'APPROVED' || quoteStatus === 'DRAFT' || quoteStatus === 'CUSTOMER_NEGOTIATION') && (
+                <Button
+                  size="sm"
+                  onClick={() => confirmMutation.mutate()}
+                  isLoading={confirmMutation.isPending}
+                  className="gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm shadow-emerald-600/20"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  Confirm Won Deal
+                </Button>
+              )}
+
+              <button
+                onClick={() => setIsDeleteModalOpen(true)}
+                className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors"
+                title="Delete Quote"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -653,6 +774,33 @@ export function QuoteBuilderPage() {
         salespersonName={user?.name || 'Sales Executive'}
         notes="Commercial proposal is valid for 30 calendar days from the date of issuance. All hardware includes standard 3-year enterprise manufacturer warranty and 24/7 technical assistance SLA."
       />
+
+      {/* Delete Quote Modal */}
+      <Dialog
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        maxWidth="sm"
+        title="Delete Quotation"
+        description={`Are you sure you want to permanently delete quotation ${quoteData?.data?.quoteNumber || id}?`}
+      >
+        <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setIsDeleteModalOpen(false)}
+          >
+            Cancel
+          </Button>
+          <Button
+            size="sm"
+            variant="destructive"
+            isLoading={deleteMutation.isPending}
+            onClick={() => deleteMutation.mutate()}
+          >
+            Delete Quotation
+          </Button>
+        </div>
+      </Dialog>
     </div>
   );
 }

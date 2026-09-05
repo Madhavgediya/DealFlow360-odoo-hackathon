@@ -12,10 +12,15 @@ router.use(apiLimiter);
 router.post('/', requireRole(['ADMIN', 'SALES_MANAGER', 'SALES_REP']), validateCreate, ctrl.createQuotation);
 router.get('/', ctrl.getQuotations);
 router.get('/:id', validateUUID('id'), ctrl.getQuotationById);
+router.patch('/:id', validateUUID('id'), requireRole(['ADMIN', 'SALES_MANAGER', 'SALES_REP']), ctrl.updateQuotation);
+router.patch('/:id/status', validateUUID('id'), requireRole(['ADMIN', 'SALES_MANAGER', 'SALES_REP']), ctrl.updateQuotationStatus);
+router.delete('/:id', validateUUID('id'), requireRole(['ADMIN', 'SALES_MANAGER']), ctrl.deleteQuotation);
 router.post('/:id/submit', validateUUID('id'), requireRole(['ADMIN', 'SALES_MANAGER', 'SALES_REP']), ctrl.submitQuotation);
 
 // Lines
+router.put('/:id/lines', validateUUID('id'), requireRole(['ADMIN', 'SALES_MANAGER', 'SALES_REP']), ctrl.replaceQuotationLines);
 router.post('/:id/lines', validateUUID('id'), requireRole(['ADMIN', 'SALES_MANAGER', 'SALES_REP']), validateAddLine, ctrl.addQuotationLine);
 router.delete('/:id/lines/:lineId', validateUUID('id'), validateUUID('lineId'), requireRole(['ADMIN', 'SALES_MANAGER', 'SALES_REP']), ctrl.removeQuotationLine);
 
 module.exports = router;
+

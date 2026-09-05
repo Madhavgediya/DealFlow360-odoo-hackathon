@@ -107,6 +107,19 @@ class MockDatabase {
     return lead;
   }
 
+  public updateLead(id: string, updates: Partial<Lead>): Lead | undefined {
+    const index = this.leads.findIndex((l) => l.id === id);
+    if (index === -1) return undefined;
+    this.leads[index] = { ...this.leads[index], ...updates, updatedAt: new Date().toISOString() };
+    return this.leads[index];
+  }
+
+  public deleteLead(id: string): boolean {
+    const before = this.leads.length;
+    this.leads = this.leads.filter((l) => l.id !== id);
+    return this.leads.length < before;
+  }
+
   public addCustomer(customer: Customer): Customer {
     this.customers.unshift(customer);
     return customer;
@@ -268,6 +281,12 @@ class MockDatabase {
 
   public getQuoteById(id: string): Quote | undefined {
     return this.quotes.find((q) => q.id === id);
+  }
+
+  public deleteQuote(id: string): boolean {
+    const before = this.quotes.length;
+    this.quotes = this.quotes.filter((q) => q.id !== id);
+    return this.quotes.length < before;
   }
 
   public createQuote(payload: CreateQuotePayload, salespersonId: string = 'usr-rep', salespersonName: string = 'Ananya Sharma'): Quote {

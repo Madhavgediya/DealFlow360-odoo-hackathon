@@ -30,7 +30,13 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
   }
 
   // If specific role access is required
-  if (requiredRole && !hasRole(user, requiredRole) && user.role !== 'ADMIN') {
+  if (
+    requiredRole &&
+    !hasRole(user, requiredRole) &&
+    user.role !== 'ADMIN' &&
+    user.role !== 'SUPER_ADMIN' &&
+    user.role !== 'SUPERADMIN'
+  ) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center p-6 text-center space-y-4 font-sans">
         <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-700 flex items-center justify-center">
@@ -38,7 +44,7 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
         </div>
         <h2 className="text-xl font-bold text-slate-900 font-display">Access Restricted</h2>
         <p className="text-xs text-slate-500 max-w-md">
-          Your current account role (<strong>{user.roleTitle}</strong>) does not have authorization to view this administrative workspace.
+          Your current account role (<strong>{user.roleTitle || user.role}</strong>) does not have authorization to view this administrative workspace.
         </p>
         <Button
           size="sm"
@@ -53,3 +59,4 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
 
   return <>{children}</>;
 }
+

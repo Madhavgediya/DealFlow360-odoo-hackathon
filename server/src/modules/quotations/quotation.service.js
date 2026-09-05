@@ -36,6 +36,31 @@ const getQuotationById = async (id, companyId) => {
   return quotation;
 };
 
+const updateQuotation = async (id, data, companyId) => {
+  const quotation = await quotationRepository.getQuotationByIdAndCompany(id, companyId);
+  if (!quotation) throw createAppError('Quotation not found', 404, 'QUOTATION_NOT_FOUND');
+
+  const updated = await quotationRepository.updateQuotation(id, companyId, data);
+  const lines = await quotationRepository.getQuotationLines(id, companyId);
+  updated.lines = lines;
+  return updated;
+};
+
+const updateQuotationStatus = async (id, status, companyId) => {
+  const quotation = await quotationRepository.getQuotationByIdAndCompany(id, companyId);
+  if (!quotation) throw createAppError('Quotation not found', 404, 'QUOTATION_NOT_FOUND');
+
+  return quotationRepository.updateQuotationStatus(id, companyId, status);
+};
+
+const deleteQuotation = async (id, companyId) => {
+  const quotation = await quotationRepository.getQuotationByIdAndCompany(id, companyId);
+  if (!quotation) throw createAppError('Quotation not found', 404, 'QUOTATION_NOT_FOUND');
+
+  await quotationRepository.clearQuotationLines(id, companyId);
+  return quotationRepository.deleteQuotation(id, companyId);
+};
+
 // SERVER-AUTHORITATIVE RECALCULATION
 const recalculateQuotationTotals = async (quotationId, companyId) => {
   const lines = await quotationRepository.getQuotationLines(quotationId, companyId);
@@ -51,8 +76,9 @@ const recalculateQuotationTotals = async (quotationId, companyId) => {
     discount_total += lineDiscount;
   }
 
-  const tax_total = 0; // Simplified for now
-  const total = subtotal - discount_total + tax_total;
+  const taxable = subtotal - discount_total;
+  const tax_total = taxable * 0.18; // 18% GST standard
+  const total = taxable + tax_total;
 
   return quotationRepository.updateQuotationTotals(quotationId, companyId, {
     subtotal,
@@ -106,6 +132,43 @@ const addQuotationLine = async (quotationId, data, companyId) => {
   return line;
 };
 
+const replaceQuotationLines = async (quotationId, linesData, companyId) => {
+  const quotation = await quotationRepository.getQuotationByIdAndCompany(quotationId, companyId);
+  if (!quotation) throw createAppError('Quotation not found', 404, 'QUOTATION_NOT_FOUND');
+
+  // Clear existing lines
+  await quotationRepository.clearQuotationLines(quotationId, companyId);
+
+  // Add all lines
+  for (const item of linesData) {
+    let unit_price = Number(item.unit_price) || 0;
+    if (!unit_price && item.product_id) {
+      const product = await productRepository.getProductByIdAndCompany(item.product_id, companyId);
+      if (product) unit_price = Number(product.base_price);
+    }
+
+    const quantity = Number(item.quantity) || 1;
+    const discount_percent = Number(item.discount_percent || item.discount_percentage) || 0;
+    const lineTotalBeforeDiscount = unit_price * quantity;
+    const lineDiscount = lineTotalBeforeDiscount * (discount_percent / 100);
+    const line_total = lineTotalBeforeDiscount - lineDiscount;
+
+    await quotationRepository.addQuotationLine({
+      company_id: companyId,
+      quotation_id: quotationId,
+      product_id: item.product_id,
+      quantity,
+      unit_price,
+      discount_percent,
+      line_total
+    });
+  }
+
+  // Recalculate
+  await recalculateQuotationTotals(quotationId, companyId);
+  return getQuotationById(quotationId, companyId);
+};
+
 const removeQuotationLine = async (quotationId, lineId, companyId) => {
   const quotation = await quotationRepository.getQuotationByIdAndCompany(quotationId, companyId);
   if (!quotation) throw createAppError('Quotation not found', 404, 'QUOTATION_NOT_FOUND');
@@ -133,7 +196,11 @@ module.exports = {
   createQuotation,
   getQuotations,
   getQuotationById,
+  updateQuotation,
+  updateQuotationStatus,
+  deleteQuotation,
   addQuotationLine,
+  replaceQuotationLines,
   removeQuotationLine,
   submitQuotation
 };

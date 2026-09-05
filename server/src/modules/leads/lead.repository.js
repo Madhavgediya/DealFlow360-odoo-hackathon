@@ -51,25 +51,48 @@ const createLead = async (data) => {
 };
 
 const getLeads = async (company_id, filters = {}) => {
-  const conditions = ['company_id = $1'];
+  const conditions = ['l.company_id = $1'];
   const values = [company_id];
   let i = 2;
 
-  if (filters.status) { conditions.push(`status = $${i}`); values.push(filters.status); i++; }
-  if (filters.assigned_user_id) { conditions.push(`assigned_user_id = $${i}`); values.push(filters.assigned_user_id); i++; }
-  if (filters.from_date) { conditions.push(`created_at >= $${i}`); values.push(filters.from_date); i++; }
-  if (filters.to_date) { conditions.push(`created_at <= $${i}`); values.push(filters.to_date); i++; }
+  if (filters.status && filters.status !== 'ALL') { conditions.push(`l.status = $${i}`); values.push(filters.status); i++; }
+  if (filters.assigned_user_id) { conditions.push(`l.assigned_user_id = $${i}`); values.push(filters.assigned_user_id); i++; }
+  if (filters.from_date) { conditions.push(`l.created_at >= $${i}`); values.push(filters.from_date); i++; }
+  if (filters.to_date) { conditions.push(`l.created_at <= $${i}`); values.push(filters.to_date); i++; }
 
-  const query = `SELECT ${LEAD_FIELDS} FROM leads WHERE ${conditions.join(' AND ')} ORDER BY created_at DESC`;
+  const query = `
+    SELECT 
+      l.id, l.company_id, l.lead_number, l.first_name, l.last_name, l.company_name,
+      l.email, l.phone, l.source, l.campaign, l.industry, l.country, l.city,
+      l.estimated_budget, l.requirement, l.priority, l.assigned_user_id,
+      l.status, l.qualification_status, l.lead_score, l.score_band,
+      l.trial_status, l.trial_started_at, l.trial_ends_at, l.converted_customer_id,
+      l.created_at, l.updated_at,
+      u.name as assigned_user_name
+    FROM leads l
+    LEFT JOIN users u ON u.id = l.assigned_user_id
+    WHERE ${conditions.join(' AND ')} 
+    ORDER BY l.created_at DESC
+  `;
   const result = await db.query(query, values);
   return result.rows;
 };
 
 const getLeadByIdAndCompany = async (id, company_id) => {
-  const result = await db.query(
-    `SELECT ${LEAD_FIELDS} FROM leads WHERE id = $1 AND company_id = $2`,
-    [id, company_id]
-  );
+  const query = `
+    SELECT 
+      l.id, l.company_id, l.lead_number, l.first_name, l.last_name, l.company_name,
+      l.email, l.phone, l.source, l.campaign, l.industry, l.country, l.city,
+      l.estimated_budget, l.requirement, l.priority, l.assigned_user_id,
+      l.status, l.qualification_status, l.lead_score, l.score_band,
+      l.trial_status, l.trial_started_at, l.trial_ends_at, l.converted_customer_id,
+      l.created_at, l.updated_at,
+      u.name as assigned_user_name
+    FROM leads l
+    LEFT JOIN users u ON u.id = l.assigned_user_id
+    WHERE l.id = $1 AND l.company_id = $2
+  `;
+  const result = await db.query(query, [id, company_id]);
   return result.rows[0];
 };
 

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { quotesApi } from '../../services/api/quotes.api';
 import { useAuthStore } from '../../stores/auth.store';
 import { formatCurrency } from '../../utils/currency';
@@ -9,20 +9,36 @@ import { Quote } from '../../types/quote';
 import { StatusBadge, RiskBadge } from '../../components/common/StatusBadge';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
+import { Dialog } from '../../components/ui/dialog';
 import { Breadcrumbs } from '../../components/common/Breadcrumbs';
 import { useNavigate } from 'react-router-dom';
-import { Plus, LayoutGrid, List, Building } from 'lucide-react';
+import { Plus, LayoutGrid, List, Building, FileEdit, Repeat, Trash2, ArrowRight } from 'lucide-react';
+import { toast } from 'sonner';
 import { cn } from '../../utils/formatting';
 
 export function QuotesPage() {
   const { currency } = useAuthStore();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [viewMode, setViewMode] = React.useState<'table' | 'kanban'>('table');
   const [selectedStatus, setSelectedStatus] = React.useState<string>('ALL');
+  const [deleteQuoteTarget, setDeleteQuoteTarget] = React.useState<Quote | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['quotes', selectedStatus],
     queryFn: () => quotesApi.getQuotes(undefined, selectedStatus === 'ALL' ? undefined : selectedStatus),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => quotesApi.deleteQuote(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['quotes'] });
+      toast.success('Quotation deleted successfully');
+      setDeleteQuoteTarget(null);
+    },
+    onError: (err: any) => {
+      toast.error(err.message || 'Failed to delete quote');
+    },
   });
 
   const quotes = data?.data || [];
@@ -65,7 +81,7 @@ export function QuotesPage() {
       header: 'Net Total Amount',
       sortable: true,
       cell: (q) => (
-        <span className="font-bold text-[#252733]">
+        <span className="font-bold text-[#252733] font-mono">
           {formatCurrency(q.totalAmount, currency)}
         </span>
       ),
@@ -77,7 +93,7 @@ export function QuotesPage() {
       cell: (q) => (
         <span
           className={cn(
-            'font-semibold',
+            'font-semibold font-mono',
             q.discountPercentage > 15
               ? 'text-rose-600'
               : q.discountPercentage > 10
@@ -96,7 +112,7 @@ export function QuotesPage() {
       cell: (q) => (
         <span
           className={cn(
-            'font-bold',
+            'font-bold font-mono',
             q.grossMarginPercentage < 18 ? 'text-rose-600' : 'text-emerald-600'
           )}
         >
@@ -132,6 +148,38 @@ export function QuotesPage() {
       sortable: true,
       cell: (q) => <span className="text-slate-500">{formatDate(q.validUntil)}</span>,
     },
+    {
+      key: 'actions' as any,
+      header: 'Actions',
+      cell: (q) => (
+        <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => navigate(`/sales/quotes/${q.id}`)}
+            className="h-7 px-2 text-[11px] gap-1 border-[#ecdfe8] bg-[#f5eff3] text-[#714b67] hover:bg-[#ecdfe8]"
+            title="Open Quote Builder"
+          >
+            <FileEdit className="w-3 h-3" />
+            Edit
+          </Button>
+          <button
+            onClick={() => navigate(`/sales/negotiations/${q.id}`)}
+            className="p-1.5 text-slate-400 hover:text-[#714b67] hover:bg-[#f5eff3] rounded-lg transition-colors"
+            title="Negotiation Diff"
+          >
+            <Repeat className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={() => setDeleteQuoteTarget(q)}
+            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+            title="Delete Quote"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      ),
+    },
   ];
 
   return (
@@ -141,7 +189,7 @@ export function QuotesPage() {
         <div>
           <Breadcrumbs items={[{ label: 'Quotations' }]} />
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#252733] mt-1 font-display">
-            Quotations
+            Commercial Quotations & CPQ
           </h1>
         </div>
 
@@ -176,7 +224,7 @@ export function QuotesPage() {
             className="gap-1.5 shadow-sm bg-[#714b67] hover:bg-[#5e3c54] text-white"
           >
             <Plus className="w-4 h-4" />
-            New quotation
+            Create Quotation
           </Button>
         </div>
       </div>
@@ -242,9 +290,19 @@ export function QuotesPage() {
                         {q.customerName}
                       </div>
 
-                      <div className="flex items-baseline justify-between pt-2 border-t border-slate-100 text-xs">
+                      <div className="flex items-baseline justify-between pt-2 border-t border-slate-100 text-xs font-mono">
                         <span className="text-slate-400">Margin: {q.grossMarginPercentage.toFixed(1)}%</span>
                         <span className="font-bold text-[#252733]">{formatCurrency(q.totalAmount, currency, { compact: true })}</span>
+                      </div>
+
+                      <div className="flex items-center justify-end gap-1 pt-1" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          onClick={() => setDeleteQuoteTarget(q)}
+                          className="p-1 text-slate-400 hover:text-rose-600 rounded transition-colors text-xs"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </div>
                   ))}
@@ -254,6 +312,34 @@ export function QuotesPage() {
           })}
         </div>
       )}
+
+      {/* Delete Quote Confirmation Dialog */}
+      <Dialog
+        isOpen={Boolean(deleteQuoteTarget)}
+        onClose={() => setDeleteQuoteTarget(null)}
+        maxWidth="sm"
+        title="Delete Commercial Quotation"
+        description={`Are you sure you want to delete quotation ${deleteQuoteTarget?.quoteNumber} for ${deleteQuoteTarget?.customerName}?`}
+      >
+        <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setDeleteQuoteTarget(null)}
+          >
+            Cancel
+          </Button>
+          <Button
+            size="sm"
+            variant="destructive"
+            isLoading={deleteMutation.isPending}
+            onClick={() => deleteQuoteTarget && deleteMutation.mutate(deleteQuoteTarget.id)}
+          >
+            Delete Quotation
+          </Button>
+        </div>
+      </Dialog>
     </div>
   );
 }
+

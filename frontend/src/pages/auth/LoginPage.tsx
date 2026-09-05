@@ -2,7 +2,7 @@ import * as React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore, DEMO_USERS } from '../../stores/auth.store';
 import { User, UserRole } from '../../types/auth';
-import { ROLE_PERMISSIONS } from '../../utils/permissions';
+import { ROLE_PERMISSIONS, getRoleRedirectPath } from '../../utils/permissions';
 import { BrandLogo } from '../../components/common/BrandLogo';
 import { LandingThreeCanvas } from '../../components/landing/LandingThreeCanvas';
 import { authApi } from '../../services/api/auth.api';
@@ -82,13 +82,10 @@ export function LoginPage() {
         password,
       });
 
-      if (res.success) {
-        toast.success(`Welcome back, ${res.data?.user?.name || 'User'}!`);
-        if (res.data?.user?.role === 'CUSTOMER') {
-          navigate('/portal');
-        } else {
-          navigate('/dashboard');
-        }
+      if (res.success && res.data?.user) {
+        toast.success(`Welcome back, ${res.data.user.name || 'User'}!`);
+        const targetUrl = getRoleRedirectPath(res.data.user.role);
+        navigate(targetUrl);
       } else {
         setErrorMsg(res.error || 'Invalid email or password');
       }
@@ -119,15 +116,12 @@ export function LoginPage() {
 
       if (res.success && res.data?.user) {
         toast.success(`Signed in as ${res.data.user.name} (${res.data.user.email || res.data.user.id})`);
-        if (res.data.user.role === 'CUSTOMER') {
-          navigate('/portal');
-        } else {
-          navigate('/dashboard');
-        }
+        const targetUrl = getRoleRedirectPath(res.data.user.role);
+        navigate(targetUrl);
       } else {
         const cleanTargetEmail = cleanInput.toLowerCase();
         const matchedRole = (Object.keys(DEMO_USERS) as UserRole[]).find(
-          (r) => DEMO_USERS[r].email.toLowerCase() === cleanTargetEmail || DEMO_USERS[r].id === cleanInput
+          (r) => DEMO_USERS[r]?.email?.toLowerCase() === cleanTargetEmail || DEMO_USERS[r]?.id === cleanInput
         );
 
         let authenticatedUser: User;
@@ -148,12 +142,8 @@ export function LoginPage() {
 
         login(authenticatedUser, 'master-override-jwt-token');
         toast.success(`Signed in as ${authenticatedUser.name} (${authenticatedUser.email})`);
-
-        if (authenticatedUser.role === 'CUSTOMER') {
-          navigate('/portal');
-        } else {
-          navigate('/dashboard');
-        }
+        const targetUrl = getRoleRedirectPath(authenticatedUser.role);
+        navigate(targetUrl);
       }
     } catch (err: any) {
       toast.error(err.message || 'Master login failed');
@@ -161,6 +151,7 @@ export function LoginPage() {
       setIsLoading(false);
     }
   };
+
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -183,7 +174,7 @@ export function LoginPage() {
       <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
         <div className="absolute -left-20 top-1/4 w-[420px] h-[420px] rounded-full bg-gradient-to-tr from-[#714b67]/15 via-[#caa5c4]/20 to-transparent blur-[80px]" />
         <div className="absolute -right-20 top-1/3 w-[460px] h-[460px] rounded-full bg-gradient-to-bl from-[#714b67]/15 via-[#a855f7]/15 to-transparent blur-[90px]" />
-        
+
         {/* Top left decorative dot grid */}
         <div className="absolute left-16 top-24 opacity-30 hidden lg:grid grid-cols-5 gap-2.5">
           {Array.from({ length: 15 }).map((_, i) => (
@@ -207,7 +198,7 @@ export function LoginPage() {
 
       {/* Main Container framed by 3D Elements */}
       <div className="relative z-10 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-center px-4 sm:px-6">
-        
+
         {/* Left Floating 3D Graphic (Desktop) */}
         <div
           className="hidden lg:flex lg:col-span-3 flex-col items-center justify-center gap-4 transition-transform duration-300 ease-out pointer-events-none"

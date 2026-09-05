@@ -4,21 +4,44 @@ const ALLOWED_STATUSES = ['ACTIVE', 'INACTIVE'];
 const ALLOWED_ROLES = ['ADMIN', 'SALES_REP', 'SALES_MANAGER', 'FINANCE', 'OPERATIONS', 'CUSTOMER'];
 
 const createUserSchema = Joi.object({
-  first_name: Joi.string().trim().max(100).required(),
+  first_name: Joi.string().trim().max(100).optional().allow('', null),
   last_name: Joi.string().trim().max(100).optional().allow('', null),
+  name: Joi.string().trim().max(200).optional().allow('', null),
   email: Joi.string().trim().email().required(),
-  password: Joi.string().min(6).required(),
+  password: Joi.string().min(6).optional().allow('', null),
   phone: Joi.string().trim().max(50).optional().allow('', null),
   avatar_url: Joi.string().trim().uri().optional().allow('', null),
-  role: Joi.string().valid(...ALLOWED_ROLES).optional(),
-  status: Joi.string().valid(...ALLOWED_STATUSES).optional()
+  role: Joi.string().trim().max(100).optional().allow('', null),
+  role_id: Joi.string().guid({ version: ['uuidv4'] }).optional().allow('', null),
+  roleId: Joi.string().guid({ version: ['uuidv4'] }).optional().allow('', null),
+  job_title: Joi.string().trim().max(100).optional().allow('', null),
+  jobTitle: Joi.string().trim().max(100).optional().allow('', null),
+  department: Joi.string().trim().max(100).optional().allow('', null),
+  status: Joi.string().valid(...ALLOWED_STATUSES).optional(),
+  permissions: Joi.array().optional(),
+  retailer_details: Joi.object().optional(),
+  retailerDetails: Joi.object().optional(),
+  company_id: Joi.string().guid({ version: ['uuidv4'] }).optional(),
+  companyId: Joi.string().guid({ version: ['uuidv4'] }).optional()
 });
 
 const updateUserSchema = Joi.object({
-  first_name: Joi.string().trim().max(100).optional(),
+  first_name: Joi.string().trim().max(100).optional().allow('', null),
   last_name: Joi.string().trim().max(100).optional().allow('', null),
+  name: Joi.string().trim().max(200).optional().allow('', null),
+  email: Joi.string().trim().email().optional(),
   phone: Joi.string().trim().max(50).optional().allow('', null),
-  avatar_url: Joi.string().trim().uri().optional().allow('', null)
+  avatar_url: Joi.string().trim().uri().optional().allow('', null),
+  role: Joi.string().trim().max(100).optional().allow('', null),
+  role_id: Joi.string().guid({ version: ['uuidv4'] }).optional().allow('', null),
+  roleId: Joi.string().guid({ version: ['uuidv4'] }).optional().allow('', null),
+  job_title: Joi.string().trim().max(100).optional().allow('', null),
+  jobTitle: Joi.string().trim().max(100).optional().allow('', null),
+  department: Joi.string().trim().max(100).optional().allow('', null),
+  status: Joi.string().valid(...ALLOWED_STATUSES).optional(),
+  permissions: Joi.array().optional(),
+  retailer_details: Joi.object().optional(),
+  retailerDetails: Joi.object().optional()
 }).min(1);
 
 const statusSchema = Joi.object({

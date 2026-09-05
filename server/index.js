@@ -2,38 +2,45 @@ require("dotenv").config();
 const express = require("express");
 const os = require("os");
 
-const authRoutes = require('./src/modules/auth/auth.routes');
-const companyRoutes = require('./src/modules/companies/company.routes');
-const userRoutes = require('./src/modules/users/user.routes');
-const roleRoutes = require('./src/modules/roles/role.routes');
-const permissionRoutes = require('./src/modules/permissions/permission.routes');
-const leadRoutes = require('./src/modules/leads/lead.routes');
-const customerRoutes = require('./src/modules/customers/customer.routes');
-const contactRoutes = require('./src/modules/contacts/contact.routes');
-const opportunityRoutes = require('./src/modules/opportunities/opportunity.routes');
-const activityRoutes = require('./src/modules/activities/activity.routes');
-const productRoutes = require('./src/modules/products/product.routes');
-const pricingRoutes = require('./src/modules/pricing/pricing.routes');
-const quotationRoutes = require('./src/modules/quotations/quotation.routes');
-const orderRoutes = require('./src/modules/orders/order.routes');
-const inventoryRoutes = require('./src/modules/inventory/inventory.routes');
-const invoiceRoutes = require('./src/modules/invoices/invoice.routes');
-const paymentRoutes = require('./src/modules/payments/payment.routes');
-const reportRoutes = require('./src/modules/reports/report.routes');
-const aiRoutes = require('./src/modules/ai/ai.routes');
-const errorHandler = require('./src/middleware/error.middleware');
-const cors = require('cors');
-const cookieParser = require('cookie-parser');
+const authRoutes = require("./src/modules/auth/auth.routes");
+const companyRoutes = require("./src/modules/companies/company.routes");
+const userRoutes = require("./src/modules/users/user.routes");
+const roleRoutes = require("./src/modules/roles/role.routes");
+const permissionRoutes = require("./src/modules/permissions/permission.routes");
+const leadRoutes = require("./src/modules/leads/lead.routes");
+const customerRoutes = require("./src/modules/customers/customer.routes");
+const contactRoutes = require("./src/modules/contacts/contact.routes");
+const opportunityRoutes = require("./src/modules/opportunities/opportunity.routes");
+const activityRoutes = require("./src/modules/activities/activity.routes");
+const productRoutes = require("./src/modules/products/product.routes");
+const pricingRoutes = require("./src/modules/pricing/pricing.routes");
+const quotationRoutes = require("./src/modules/quotations/quotation.routes");
+const orderRoutes = require("./src/modules/orders/order.routes");
+const inventoryRoutes = require("./src/modules/inventory/inventory.routes");
+const invoiceRoutes = require("./src/modules/invoices/invoice.routes");
+const paymentRoutes = require("./src/modules/payments/payment.routes");
+const reportRoutes = require("./src/modules/reports/report.routes");
+const aiRoutes = require("./src/modules/ai/ai.routes");
+const errorHandler = require("./src/middleware/error.middleware");
+const cors = require("cors");
+const cookieParser = require("cookie-parser");
 
 const app = express();
 const PORT = process.env.PORT || 5050;
 const HOST = "0.0.0.0";
 
 // Middleware
-app.use(cors({
-  origin: ['http://localhost:5173', 'http://10.217.113.128:5173', 'http://127.0.0.1:5173'],
-  credentials: true
-}));
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",
+      "http://10.217.113.128:5173",
+      "http://10.217.113.48:5173",
+      "http://127.0.0.1:5173",
+    ],
+    credentials: true,
+  }),
+);
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

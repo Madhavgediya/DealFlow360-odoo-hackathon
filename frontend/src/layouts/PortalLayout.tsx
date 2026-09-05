@@ -60,7 +60,7 @@ export function PortalLayout() {
             <div className="text-[11px] text-[#714b67] font-medium">{user?.email || 'rohan.desai@quantumcloud.com'}</div>
           </div>
 
-          <button
+          {/* <button
             onClick={() => {
               switchRole('ADMIN');
               navigate('/dashboard');
@@ -70,7 +70,7 @@ export function PortalLayout() {
           >
             <span>Internal Workspace</span>
             <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
-          </button>
+          </button> */}
 
           <button
             onClick={handleLogout}

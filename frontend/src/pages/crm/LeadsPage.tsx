@@ -1,27 +1,29 @@
 import * as React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { leadsApi, CreateLeadPayload } from '../../services/api/leads.api';
+import { usersApi } from '../../services/api/users.api';
 import { useAuthStore } from '../../stores/auth.store';
 import { formatCurrency } from '../../utils/currency';
 import { formatDate } from '../../utils/date';
 import { DataTable, ColumnDef } from '../../components/data-table/DataTable';
-import { Lead, LeadStage } from '../../types/crm';
+import { Lead, LeadStage, LeadSource } from '../../types/crm';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Dialog } from '../../components/ui/dialog';
 import { Input } from '../../components/ui/input';
 import { Breadcrumbs } from '../../components/common/Breadcrumbs';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, Building, Plus, UserPlus } from 'lucide-react';
+import { Sparkles, Building, Plus, UserPlus, FileText, Trash2, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../../utils/formatting';
 
 export function LeadsPage() {
-  const { currency } = useAuthStore();
+  const { currency, user: currentUser } = useAuthStore();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [selectedStage, setSelectedStage] = React.useState<string>('ALL');
   const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false);
+  const [deleteConfirmLead, setDeleteConfirmLead] = React.useState<Lead | null>(null);
 
   // Form State
   const [firstName, setFirstName] = React.useState('');
@@ -29,9 +31,11 @@ export function LeadsPage() {
   const [companyName, setCompanyName] = React.useState('');
   const [email, setEmail] = React.useState('');
   const [phone, setPhone] = React.useState('');
-  const [industry, setIndustry] = React.useState('Technology & Telecommunications');
+  const [industry, setIndustry] = React.useState('Enterprise Technology');
   const [budget, setBudget] = React.useState<number>(1500000);
   const [priority, setPriority] = React.useState<'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'>('HIGH');
+  const [source, setSource] = React.useState<LeadSource>('WEBSITE');
+  const [assignedUserId, setAssignedUserId] = React.useState<string>('');
   const [requirements, setRequirements] = React.useState('');
 
   const { data, isLoading } = useQuery({
@@ -39,7 +43,14 @@ export function LeadsPage() {
     queryFn: () => leadsApi.getLeads(undefined, selectedStage === 'ALL' ? undefined : selectedStage),
   });
 
+  const { data: usersData } = useQuery({
+    queryKey: ['users'],
+    queryFn: () => usersApi.getUsers(),
+  });
+
   const leads = data?.data || [];
+  const users = usersData?.data || [];
+  const salesReps = users.filter((u) => u.role === 'SALES_REP' || u.role === 'SALES_MANAGER' || u.role === 'ADMIN');
 
   const stageTabs = [
     { id: 'ALL', label: 'All Leads', count: leads.length },
@@ -62,6 +73,18 @@ export function LeadsPage() {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: (leadId: string) => leadsApi.deleteLead(leadId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      toast.success('Lead removed successfully');
+      setDeleteConfirmLead(null);
+    },
+    onError: (err: any) => {
+      toast.error(err.message || 'Failed to delete lead');
+    },
+  });
+
   const resetForm = () => {
     setFirstName('');
     setLastName('');
@@ -70,6 +93,8 @@ export function LeadsPage() {
     setPhone('');
     setRequirements('');
     setBudget(1500000);
+    setAssignedUserId(currentUser?.id || '');
+    setSource('WEBSITE');
   };
 
   const handleCreateSubmit = (e: React.FormEvent) => {
@@ -89,7 +114,7 @@ export function LeadsPage() {
       budget,
       priority,
       requirements,
-      source: 'WEBSITE',
+      source,
     });
   };
 
@@ -173,13 +198,38 @@ export function LeadsPage() {
     {
       key: 'assignedToName',
       header: 'Assigned To',
-      cell: (lead) => <span className="text-slate-600">{lead.assignedToName}</span>,
+      cell: (lead) => <span className="text-slate-600">{lead.assignedToName || 'Unassigned'}</span>,
     },
     {
       key: 'createdAt',
       header: 'Created Date',
       sortable: true,
       cell: (lead) => <span className="text-slate-500">{formatDate(lead.createdAt)}</span>,
+    },
+    {
+      key: 'actions' as any,
+      header: 'Actions',
+      cell: (lead) => (
+        <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => navigate(`/sales/quotes/new?leadId=${lead.id}&customerName=${encodeURIComponent(lead.companyName)}&budget=${lead.budget}`)}
+            className="h-7 px-2 text-[11px] gap-1 border-[#ecdfe8] bg-[#f5eff3] text-[#714b67] hover:bg-[#ecdfe8]"
+            title="Create Quotation for Lead"
+          >
+            <FileText className="w-3 h-3" />
+            Quote
+          </Button>
+          <button
+            onClick={() => setDeleteConfirmLead(lead)}
+            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+            title="Delete Lead"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      ),
     },
   ];
 
@@ -190,12 +240,15 @@ export function LeadsPage() {
         <div>
           <Breadcrumbs items={[{ label: 'Leads & Pipeline' }]} />
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#252733] mt-1 font-display">
-            Leads & Pipeline
+            Leads & Commercial Pipeline
           </h1>
         </div>
 
         <Button
-          onClick={() => setIsCreateModalOpen(true)}
+          onClick={() => {
+            resetForm();
+            setIsCreateModalOpen(true);
+          }}
           className="gap-2 shadow-sm bg-[#714b67] hover:bg-[#5e3c54] text-white"
           size="sm"
         >
@@ -246,7 +299,7 @@ export function LeadsPage() {
             <span className="font-display font-bold text-[#252733]">Create Commercial Lead</span>
           </div>
         }
-        description="Ingest new enterprise lead with automated AI qualification scoring and budget estimation."
+        description="Ingest new enterprise lead with automated AI qualification scoring and budget estimation in Indian Rupees (₹)."
       >
         <form onSubmit={handleCreateSubmit} className="space-y-4 pt-2 font-sans text-xs">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -307,7 +360,7 @@ export function LeadsPage() {
               />
             </div>
             <div>
-              <label className="text-slate-600 font-semibold block mb-1">Estimated Deal Budget (INR)</label>
+              <label className="text-slate-600 font-semibold block mb-1">Estimated Deal Budget (₹ INR)</label>
               <Input
                 type="number"
                 value={budget}
@@ -329,13 +382,29 @@ export function LeadsPage() {
             </div>
           </div>
 
-          <div>
-            <label className="text-slate-600 font-semibold block mb-1">Industry Vertical</label>
-            <Input
-              value={industry}
-              onChange={(e) => setIndustry(e.target.value)}
-              placeholder="e.g. Cloud SaaS, Manufacturing, Financial Services"
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-slate-600 font-semibold block mb-1">Industry Vertical</label>
+              <Input
+                value={industry}
+                onChange={(e) => setIndustry(e.target.value)}
+                placeholder="e.g. Cloud SaaS, Manufacturing, Financial Services"
+              />
+            </div>
+            <div>
+              <label className="text-slate-600 font-semibold block mb-1">Lead Source</label>
+              <select
+                value={source}
+                onChange={(e: any) => setSource(e.target.value)}
+                className="w-full h-9 rounded-xl border border-[#e5e7eb] bg-white px-3 text-xs text-[#252733]"
+              >
+                <option value="WEBSITE">Website Inbound</option>
+                <option value="REFERRAL">Partner Referral</option>
+                <option value="EVENT">Trade Expo / Event</option>
+                <option value="DIRECT">Direct Sales Outreach</option>
+                <option value="CAMPAIGN">Marketing Campaign</option>
+              </select>
+            </div>
           </div>
 
           <div>
@@ -368,6 +437,34 @@ export function LeadsPage() {
           </div>
         </form>
       </Dialog>
+
+      {/* Delete Lead Confirmation Modal */}
+      <Dialog
+        isOpen={Boolean(deleteConfirmLead)}
+        onClose={() => setDeleteConfirmLead(null)}
+        maxWidth="sm"
+        title="Delete Lead Record"
+        description={`Are you sure you want to delete ${deleteConfirmLead?.companyName} (${deleteConfirmLead?.fullName})? This action cannot be undone.`}
+      >
+        <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setDeleteConfirmLead(null)}
+          >
+            Cancel
+          </Button>
+          <Button
+            size="sm"
+            variant="destructive"
+            isLoading={deleteMutation.isPending}
+            onClick={() => deleteConfirmLead && deleteMutation.mutate(deleteConfirmLead.id)}
+          >
+            Delete Lead
+          </Button>
+        </div>
+      </Dialog>
     </div>
   );
 }
+

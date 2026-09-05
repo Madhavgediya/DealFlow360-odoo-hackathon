@@ -248,9 +248,58 @@ export const quotesApi = {
     modifierName?: string,
     modifierRole?: string
   ): Promise<ApiResponse<Quote>> => {
-    await delay(200);
+    if (UUID_REGEX.test(quoteId)) {
+      try {
+        const payloadLines = lines.map(l => ({
+          product_id: l.productId,
+          quantity: l.quantity,
+          unit_price: l.unitPrice,
+          discount_percent: l.discountPercentage,
+          line_total: l.lineTotal,
+        }));
+        await apiClient.put(`/quotations/${quoteId}/lines`, payloadLines).catch(() => {});
+      } catch (err) {
+        console.debug('Live updateQuoteLines note:', err);
+      }
+    }
+
+    await delay(150);
     const quote = mockDb.updateQuoteLines(quoteId, lines, modifierName, modifierRole);
     return formatSuccessResponse(quote, undefined, 'Quote line items updated and risk recalculated.');
+  },
+
+  updateQuoteStatus: async (quoteId: string, status: QuoteStatus): Promise<ApiResponse<Quote>> => {
+    if (UUID_REGEX.test(quoteId)) {
+      try {
+        const response = await apiClient.patch<ApiResponse<any>>(`/quotations/${quoteId}/status`, { status });
+        if (response.data && response.data.success && response.data.data) {
+          return formatSuccessResponse(adaptServerQuote(response.data.data), undefined, `Status updated to ${status}`);
+        }
+      } catch (err) {
+        console.debug('Live updateQuoteStatus note:', err);
+      }
+    }
+
+    const quote = mockDb.getQuoteById(quoteId);
+    if (quote) {
+      quote.status = status;
+      quote.updatedAt = new Date().toISOString();
+      return formatSuccessResponse(quote, undefined, `Status updated to ${status}`);
+    }
+    return formatErrorResponse('Quote not found');
+  },
+
+  deleteQuote: async (quoteId: string): Promise<ApiResponse<{ id: string }>> => {
+    if (UUID_REGEX.test(quoteId)) {
+      try {
+        await apiClient.delete(`/quotations/${quoteId}`);
+      } catch (err) {
+        console.debug('Live deleteQuote note:', err);
+      }
+    }
+
+    mockDb.deleteQuote(quoteId);
+    return formatSuccessResponse({ id: quoteId }, undefined, 'Quotation removed successfully');
   },
 
   confirmQuote: async (quoteId: string): Promise<ApiResponse<Quote>> => {
@@ -284,3 +333,4 @@ export const quotesApi = {
     return formatSuccessResponse(quote, undefined, 'Quote confirmed as Won Deal!');
   },
 };
+

@@ -14,8 +14,20 @@ const createCompanyWithAdmin = async (companyData, adminData) => {
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING ${SAFE_FIELDS}
     `;
-    const compRes = await client.query(compQuery, [name, legal_name, code, email, phone, country, timezone, default_currency_id, status || 'ACTIVE', business_type || 'BOTH']);
+    const compRes = await client.query(compQuery, [
+      name,
+      legal_name || null,
+      code,
+      email || null,
+      phone || null,
+      country || null,
+      timezone || null,
+      default_currency_id || null,
+      status || 'ACTIVE',
+      business_type || 'BOTH'
+    ]);
     const company = compRes.rows[0];
+
 
     // 2. Create default Admin role
     const roleQuery = `INSERT INTO roles (company_id, name, code, description) VALUES ($1, 'Admin', 'ADMIN', 'Administrator') RETURNING id`;

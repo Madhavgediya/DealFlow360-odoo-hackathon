@@ -4,7 +4,9 @@ import { ApiResponse } from '../../types/api';
 export interface Role {
   id: string;
   name: string;
+  code?: string;
   description?: string;
+  is_system?: boolean;
   is_system_role?: boolean;
   company_id?: string;
   created_at?: string;
@@ -33,7 +35,7 @@ export const rolesApi = {
   },
 
   // Create a new role
-  createRole: async (roleData: { name: string; description?: string }): Promise<ApiResponse<Role>> => {
+  createRole: async (roleData: { name: string; code?: string; description?: string }): Promise<ApiResponse<Role>> => {
     try {
       const response = await apiClient.post('/roles', roleData);
       return formatSuccessResponse(response.data.data, undefined, 'Role created successfully');

@@ -11,12 +11,12 @@ const createCompanySchema = Joi.object({
   country: Joi.string().trim().max(100).optional().allow('', null),
   timezone: Joi.string().trim().max(100).optional().allow('', null),
   default_currency_id: Joi.string().trim().max(10).optional().allow('', null),
-  status: Joi.string().valid(...ALLOWED_STATUSES).optional(),
-  business_type: Joi.string().valid('PRODUCT', 'SERVICE', 'BOTH').optional(),
-  admin_name: Joi.string().trim().max(255).optional(),
-  admin_email: Joi.string().trim().email().optional(),
-  admin_password: Joi.string().min(8).optional()
-});
+  status: Joi.string().valid(...ALLOWED_STATUSES).optional().allow('', null),
+  business_type: Joi.string().valid('PRODUCT', 'SERVICE', 'BOTH').optional().allow('', null),
+  admin_name: Joi.string().trim().max(255).optional().allow('', null),
+  admin_email: Joi.string().trim().email().optional().allow('', null),
+  admin_password: Joi.string().min(6).optional().allow('', null)
+}).unknown(true);
 
 const updateCompanySchema = Joi.object({
   name: Joi.string().trim().max(255).optional(),
@@ -26,8 +26,10 @@ const updateCompanySchema = Joi.object({
   phone: Joi.string().trim().max(50).optional().allow('', null),
   country: Joi.string().trim().max(100).optional().allow('', null),
   timezone: Joi.string().trim().max(100).optional().allow('', null),
-  default_currency_id: Joi.string().trim().max(10).optional().allow('', null)
-}).min(1);
+  default_currency_id: Joi.string().trim().max(10).optional().allow('', null),
+  business_type: Joi.string().valid('PRODUCT', 'SERVICE', 'BOTH').optional().allow('', null),
+  status: Joi.string().valid(...ALLOWED_STATUSES).optional().allow('', null)
+}).min(1).unknown(true);
 
 const statusSchema = Joi.object({
   status: Joi.string().valid(...ALLOWED_STATUSES).required()
@@ -64,3 +66,4 @@ const validateStatus = (req, res, next) => {
 };
 
 module.exports = { validateCreate, validateUpdate, validateStatus, validateUUID };
+

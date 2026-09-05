@@ -3,13 +3,12 @@ import { Outlet, NavLink, useLocation, useNavigate, Link } from 'react-router-do
 import { useAuthStore, DEMO_COMPANIES } from '../stores/auth.store';
 import { useUIStore } from '../stores/ui.store';
 import { useAIStore } from '../stores/ai.store';
+import { useTourStore } from '../stores/tour.store';
 import { can } from '../utils/permissions';
-import { CurrencyCode } from '../types/api';
-import { DemoTourBar } from '../components/demo/DemoTourBar';
-import { RoleSwitcherBar } from '../components/demo/RoleSwitcherBar';
 import { CommandPalette } from '../components/command-menu/CommandPalette';
 import { AIChatDrawer } from '../components/ai/AIChatDrawer';
 import { NotificationCenterDrawer } from '../components/notifications/NotificationCenterDrawer';
+import { OnboardingTour } from '../components/onboarding/OnboardingTour';
 import {
   LayoutDashboard,
   Users,
@@ -24,8 +23,6 @@ import {
   Bell,
   ChevronLeft,
   ChevronRight,
-  ExternalLink,
-  ArrowRight,
   Sparkles,
   Layers,
   UserCircle,
@@ -34,6 +31,8 @@ import {
   Menu,
   X,
   Building2,
+  MessageSquare,
+  Compass,
 } from 'lucide-react';
 
 import { BrandLogo } from '../components/common/BrandLogo';
@@ -49,6 +48,7 @@ interface NavItem {
   permission?: Permission;
   badge?: string;
   badgeColor?: string;
+  dataTour?: string;
 }
 
 interface NavGroup {
@@ -57,7 +57,7 @@ interface NavGroup {
 }
 
 export function MainLayout() {
-  const { user, company, currency, setCompany, setCurrency } = useAuthStore();
+  const { user, company, setCompany } = useAuthStore();
   const {
     sidebarCollapsed,
     toggleSidebar,
@@ -65,6 +65,7 @@ export function MainLayout() {
     unreadNotificationCount,
   } = useUIStore();
   const { toggleDrawer } = useAIStore();
+  const { startTour } = useTourStore();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -102,12 +103,22 @@ export function MainLayout() {
           icon: <FileText className="w-4 h-4" />,
           badge: 'Live',
           badgeColor: 'bg-[#f5eff3] text-[#714b67]',
+          dataTour: 'nav-quotes',
+        },
+        {
+          label: 'Live Negotiations',
+          path: '/sales/negotiations',
+          icon: <MessageSquare className="w-4 h-4 text-[#714b67]" />,
+          badge: 'Deal Desk',
+          badgeColor: 'bg-amber-100 text-amber-800 font-bold',
+          dataTour: 'nav-negotiations',
         },
         {
           label: 'Leads & Pipeline',
           path: '/crm/leads',
           icon: <Users className="w-4 h-4" />,
           permission: 'lead.view' as const,
+          dataTour: 'nav-leads',
         },
         {
           label: 'Customer Accounts',
@@ -128,6 +139,7 @@ export function MainLayout() {
           permission: 'quote.approve' as const,
           badge: 'Review',
           badgeColor: 'bg-amber-100 text-amber-800 font-bold',
+          dataTour: 'nav-approvals',
         },
       ],
     },
@@ -204,12 +216,18 @@ export function MainLayout() {
       title: 'ADMINISTRATION',
       items: [
         {
+          label: 'Staff & Retailer Governance',
+          path: '/settings/users',
+          icon: <Users className="w-4 h-4 text-[#714b67]" />,
+          permission: 'settings.manage' as const,
+          badge: 'RBAC',
+          badgeColor: 'bg-[#f5eff3] text-[#714b67] font-bold border border-[#ecdfe8]',
+        },
+        {
           label: 'Roles & Permissions',
           path: '/settings/roles',
           icon: <ShieldCheck className="w-4 h-4 text-[#714b67]" />,
           permission: 'settings.manage' as const,
-          badge: 'Admin',
-          badgeColor: 'bg-[#f5eff3] text-[#714b67] font-bold border border-[#ecdfe8]',
         },
         {
           label: 'Permissions Registry',
@@ -217,37 +235,44 @@ export function MainLayout() {
           icon: <ShieldCheck className="w-4 h-4 text-[#714b67]" />,
           permission: 'settings.manage' as const,
         },
-        {
-          label: 'User Access',
-          path: '/settings/users',
-          icon: <Users className="w-4 h-4 text-[#714b67]" />,
-          permission: 'settings.manage' as const,
-        },
       ],
     },
   ];
 
-  const navigationGroups: NavGroup[] = user?.role === 'SUPER_ADMIN' ? [
-    {
-      title: 'PLATFORM MANAGEMENT',
-      items: [
+  const isSuper = user?.role === 'SUPER_ADMIN' || user?.role === 'SUPERADMIN';
+
+  const navigationGroups: NavGroup[] = isSuper
+    ? [
         {
-          label: 'Tenant Companies',
-          path: '/settings/companies',
-          icon: <Building className="w-4 h-4" />,
+          title: 'PLATFORM MANAGEMENT',
+          items: [
+            {
+              label: 'Superadmin Master Hub',
+              path: '/superadmin/dashboard',
+              icon: <Building2 className="w-4 h-4 text-[#714b67]" />,
+              badge: '⚡ Omnipotent',
+              badgeColor: 'bg-[#714b67] text-white font-bold',
+              dataTour: 'superadmin-hub',
+            },
+            {
+              label: 'Tenant Companies',
+              path: '/settings/companies',
+              icon: <Building className="w-4 h-4" />,
+            },
+            {
+              label: 'Platform Users & Retailers',
+              path: '/settings/users',
+              icon: <Users className="w-4 h-4 text-[#714b67]" />,
+            },
+          ],
         },
-        {
-          label: 'Platform Users',
-          path: '/settings/users',
-          icon: <Users className="w-4 h-4 text-[#714b67]" />,
-        },
-      ],
-    },
-    ...baseNavigationGroups
-  ] : baseNavigationGroups;
+        ...baseNavigationGroups,
+      ]
+    : baseNavigationGroups;
 
   const getPageTitle = () => {
     const p = location.pathname;
+    if (p.includes('/superadmin')) return 'Superadmin Master Hub';
     if (p.includes('/settings/users')) return 'User Access & Employee Credentials';
     if (p.includes('/ai-copilot')) return 'RAG AI Copilot Intelligence';
     if (p.includes('/profile')) return 'Account Profile';
@@ -287,13 +312,10 @@ export function MainLayout() {
 
   return (
     <div className="min-h-screen bg-[#f3f4f6] text-[#252733] flex flex-col font-sans no-print">
-      {/* 1. Walkthrough Helper Bar */}
-      {/* <DemoTourBar /> */}
+      {/* Global Interactive Guided Tour Component */}
+      <OnboardingTour />
 
-      {/* 2. Persona Role Switcher for instant permission testing */}
-      {/* <RoleSwitcherBar /> */}
-
-      {/* 3. Global Enterprise Top Header */}
+      {/* Global Enterprise Top Header */}
       <header className="h-16 border-b border-[#e5e7eb] bg-white px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30 shadow-subtle">
         {/* Left: Mobile menu toggle + Breadcrumbs */}
         <div className="flex items-center gap-3">
@@ -306,7 +328,9 @@ export function MainLayout() {
             <Menu className="w-5 h-5" />
           </button>
 
-          <BrandLogo size="sm" showText={false} className="lg:hidden" />
+          <div data-tour="brand-logo" className="shrink-0">
+            <BrandLogo size="sm" showText={false} className="lg:hidden" />
+          </div>
 
           <div className="hidden sm:flex items-center gap-2 text-xs text-slate-400">
             <span className="font-medium text-slate-500">Workspace</span>
@@ -315,15 +339,25 @@ export function MainLayout() {
           </div>
         </div>
 
-        {/* Right: Live Connection, Search, Company, Currency, AI Copilot, Notifications, Profile */}
+        {/* Right: Live Connection, Tour Trigger, Search, Company, AI Copilot, Notifications, Profile */}
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* Interactive Guided Tour Trigger */}
+          <button
+            onClick={() => startTour(user?.role)}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-semibold border border-amber-200 transition-all active:scale-95 select-none shadow-xs"
+            title="Start Interactive Website Guidance"
+          >
+            <Compass className="w-3.5 h-3.5 text-amber-600 animate-spin" style={{ animationDuration: '6s' }} />
+            <span className="hidden md:inline">Website Guidance</span>
+          </button>
+
           {/* Live Backend Connection Indicator */}
           <div
             className="hidden sm:flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-xl text-[11px] text-emerald-700 font-medium select-none"
             title="DealFlow360 Live API Gateway (Express.js + PostgreSQL)"
           >
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="font-semibold">Live System</span>
+            <span className="font-semibold">Live System (₹ INR)</span>
           </div>
 
           {/* Quick Search Trigger */}
@@ -354,23 +388,9 @@ export function MainLayout() {
             </select>
           </div>
 
-          {/* Currency Selector */}
-          <div className="flex items-center gap-1 bg-[#f3f4f6] border border-[#e5e7eb] px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-xl text-xs">
-            <span className="text-slate-400 font-mono font-bold text-[10px]">Cur:</span>
-            <select
-              value={currency}
-              onChange={(e) => setCurrency(e.target.value as CurrencyCode)}
-              className="bg-transparent border-0 text-[#252733] font-mono font-semibold text-xs focus:outline-none cursor-pointer"
-            >
-              <option value="INR" className="bg-white text-[#252733]">INR (₹)</option>
-              <option value="USD" className="bg-white text-[#252733]">USD ($)</option>
-              <option value="EUR" className="bg-white text-[#252733]">EUR (€)</option>
-              <option value="GBP" className="bg-white text-[#252733]">GBP (£)</option>
-            </select>
-          </div>
-
           {/* AI Copilot Drawer Trigger */}
           <button
+            data-tour="ai-copilot-trigger"
             onClick={toggleDrawer}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#f5eff3] hover:bg-[#ecdfe8] text-[#714b67] text-xs font-semibold border border-[#ecdfe8] transition-all active:scale-95 select-none shadow-sm"
             title="Open RAG AI Deal Copilot"
@@ -391,18 +411,8 @@ export function MainLayout() {
             )}
           </button>
 
-          {/* Customer Portal Link */}
-          <Link
-            to="/portal"
-            className="hidden sm:flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-[#e5e7eb] bg-[#f3f4f6] text-[11px] font-medium text-slate-600 hover:text-[#252733] hover:bg-slate-100 transition-colors"
-            title="Open buyer-facing Customer Portal"
-          >
-            <span>Buyer Portal</span>
-            <ExternalLink className="w-3 h-3 text-slate-400" />
-          </Link>
-
           {/* User Profile Menu */}
-          <div className="relative">
+          <div className="relative" data-tour="user-profile-menu">
             <button
               onClick={() => setUserMenuOpen(!userMenuOpen)}
               className="w-8 h-8 rounded-full bg-[#714b67] hover:bg-[#5e3c54] text-white font-bold text-xs flex items-center justify-center shadow-sm select-none font-display transition-all hover:scale-105 active:scale-95"
@@ -430,14 +440,16 @@ export function MainLayout() {
                     <User className="w-3.5 h-3.5" />
                     <span>My Account Profile</span>
                   </Link>
-                  <Link
-                    to="/portal"
-                    onClick={() => setUserMenuOpen(false)}
-                    className="flex items-center gap-2 px-3 py-2 text-xs text-slate-700 hover:bg-[#f5eff3] hover:text-[#714b67] rounded-xl transition-colors"
+                  <button
+                    onClick={() => {
+                      setUserMenuOpen(false);
+                      startTour(user?.role);
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-700 hover:bg-[#f5eff3] hover:text-[#714b67] rounded-xl transition-colors text-left"
                   >
-                    <ExternalLink className="w-3.5 h-3.5" />
-                    <span>Buyer Portal</span>
-                  </Link>
+                    <Compass className="w-3.5 h-3.5" />
+                    <span>Restart Website Tour</span>
+                  </button>
                 </div>
 
                 <div className="pt-1">
@@ -459,9 +471,8 @@ export function MainLayout() {
         </div>
       </header>
 
-      {/* 4. Main Body: Sidebar (Desktop) + Mobile Drawer + Content Viewport */}
+      {/* Main Body: Sidebar (Desktop) + Mobile Drawer + Content Viewport */}
       <div className="flex-1 flex overflow-hidden relative">
-
         {/* Desktop Sidebar */}
         <aside
           className={cn(
@@ -470,7 +481,7 @@ export function MainLayout() {
           )}
         >
           {/* Brand Header & Toggle */}
-          <div className="p-3 border-b border-[#e5e7eb] flex items-center justify-between">
+          <div className="p-3 border-b border-[#e5e7eb] flex items-center justify-between" data-tour="brand-logo">
             <Link to="/dashboard" className="cursor-pointer truncate">
               <BrandLogo size={sidebarCollapsed ? 'sm' : 'md'} showText={!sidebarCollapsed} />
             </Link>
@@ -505,6 +516,7 @@ export function MainLayout() {
                     <NavLink
                       key={item.path}
                       to={item.path}
+                      data-tour={item.dataTour}
                       className={({ isActive }) =>
                         cn(
                           'flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all group relative',

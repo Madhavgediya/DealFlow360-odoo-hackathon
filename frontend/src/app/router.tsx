@@ -1,6 +1,7 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { MainLayout } from '../layouts/MainLayout';
 import { PortalLayout } from '../layouts/PortalLayout';
+import { RetailerLayout } from '../layouts/RetailerLayout';
 import { DashboardPage } from '../pages/dashboard/DashboardPage';
 import { LeadsPage } from '../pages/crm/LeadsPage';
 import { LeadDetailPage } from '../pages/crm/LeadDetailPage';
@@ -43,6 +44,12 @@ import { PortalSubscriptionsPage } from '../pages/portal/PortalSubscriptionsPage
 import { AdminRolesPage } from '../pages/admin/AdminRolesPage';
 import { AdminPermissionsPage } from '../pages/admin/AdminPermissionsPage';
 import { AdminCompaniesPage } from '../pages/admin/AdminCompaniesPage';
+import { SuperAdminDashboardPage } from '../pages/superadmin/SuperAdminDashboardPage';
+import { RetailerDashboardPage } from '../pages/retailer/RetailerDashboardPage';
+import { RetailerQuotesPage } from '../pages/retailer/RetailerQuotesPage';
+import { RetailerNegotiationPage } from '../pages/retailer/RetailerNegotiationPage';
+import { RetailerCatalogPage } from '../pages/retailer/RetailerCatalogPage';
+import { RetailerOrdersPage } from '../pages/retailer/RetailerOrdersPage';
 
 export const router = createBrowserRouter([
   {
@@ -60,6 +67,64 @@ export const router = createBrowserRouter([
   {
     path: '/register',
     element: <RegisterPage />,
+  },
+  // Dedicated Superadmin Platform Hub
+  {
+    path: '/superadmin',
+    element: (
+      <ProtectedRoute requiredRole="SUPER_ADMIN">
+        <MainLayout />
+      </ProtectedRoute>
+    ),
+    children: [
+      {
+        index: true,
+        element: <Navigate to="/superadmin/dashboard" replace />,
+      },
+      {
+        path: 'dashboard',
+        element: <SuperAdminDashboardPage />,
+      },
+      {
+        path: 'companies',
+        element: <SuperAdminDashboardPage />,
+      },
+    ],
+  },
+  // Dedicated B2B Retailer & Dealer Portal
+  {
+    path: '/retailer',
+    element: (
+      <ProtectedRoute>
+        <RetailerLayout />
+      </ProtectedRoute>
+    ),
+    children: [
+      {
+        index: true,
+        element: <Navigate to="/retailer/dashboard" replace />,
+      },
+      {
+        path: 'dashboard',
+        element: <RetailerDashboardPage />,
+      },
+      {
+        path: 'quotes',
+        element: <RetailerQuotesPage />,
+      },
+      {
+        path: 'negotiations',
+        element: <RetailerNegotiationPage />,
+      },
+      {
+        path: 'catalog',
+        element: <RetailerCatalogPage />,
+      },
+      {
+        path: 'orders',
+        element: <RetailerOrdersPage />,
+      },
+    ],
   },
   // Main ERP Layout Routes (Protected with Auth Guard)
   {
@@ -279,3 +344,4 @@ export const router = createBrowserRouter([
     element: <Navigate to="/dashboard" replace />,
   },
 ]);
+

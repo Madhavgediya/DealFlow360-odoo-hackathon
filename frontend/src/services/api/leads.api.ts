@@ -179,6 +179,46 @@ export const leadsApi = {
     return formatSuccessResponse(newLead, undefined, 'Lead created successfully!');
   },
 
+  updateLead: async (id: string, payload: Partial<CreateLeadPayload>): Promise<ApiResponse<Lead>> => {
+    if (UUID_REGEX.test(id)) {
+      try {
+        const response = await apiClient.put<ApiResponse<any>>(`/leads/${id}`, {
+          first_name: payload.firstName,
+          last_name: payload.lastName,
+          company_name: payload.companyName,
+          email: payload.email,
+          phone: payload.phone,
+          industry: payload.industry,
+          estimated_budget: payload.budget,
+          requirement: payload.requirements,
+          priority: payload.priority,
+          source: payload.source,
+        });
+        if (response.data && response.data.success && response.data.data) {
+          return formatSuccessResponse(adaptServerLead(response.data.data), undefined, 'Lead updated successfully');
+        }
+      } catch (err) {
+        console.debug('Live updateLead note:', err);
+      }
+    }
+
+    const lead = mockDb.getLeadById(id);
+    if (lead) {
+      if (payload.firstName) lead.firstName = payload.firstName;
+      if (payload.lastName !== undefined) lead.lastName = payload.lastName;
+      if (payload.firstName || payload.lastName !== undefined) lead.fullName = `${lead.firstName} ${lead.lastName || ''}`.trim();
+      if (payload.companyName) lead.companyName = payload.companyName;
+      if (payload.email) lead.email = payload.email;
+      if (payload.phone) lead.phone = payload.phone;
+      if (payload.industry) lead.industry = payload.industry;
+      if (payload.budget) lead.budget = payload.budget;
+      if (payload.requirements) lead.requirements = payload.requirements;
+      lead.updatedAt = new Date().toISOString();
+      return formatSuccessResponse(lead, undefined, 'Lead updated successfully');
+    }
+    return formatErrorResponse('Lead not found');
+  },
+
   updateLeadStatus: async (id: string, status: LeadStage): Promise<ApiResponse<Lead>> => {
     if (UUID_REGEX.test(id)) {
       try {
@@ -196,6 +236,58 @@ export const leadsApi = {
       lead.stage = status;
       lead.updatedAt = new Date().toISOString();
       return formatSuccessResponse(lead, undefined, 'Lead status updated');
+    }
+    return formatErrorResponse('Lead not found');
+  },
+
+  deleteLead: async (id: string): Promise<ApiResponse<{ id: string }>> => {
+    if (UUID_REGEX.test(id)) {
+      try {
+        await apiClient.delete(`/leads/${id}`);
+      } catch (err) {
+        console.debug('Live deleteLead note:', err);
+      }
+    }
+
+    mockDb.deleteLead(id);
+    return formatSuccessResponse({ id }, undefined, 'Lead removed successfully');
+  },
+
+  addInteraction: async (leadId: string, interaction: {
+    type: 'CALL' | 'EMAIL' | 'MEETING' | 'NOTE';
+    subject: string;
+    notes: string;
+    outcome?: string;
+    nextFollowup?: string;
+    performedBy?: string;
+  }): Promise<ApiResponse<any>> => {
+    if (UUID_REGEX.test(leadId)) {
+      try {
+        await apiClient.post(`/leads/${leadId}/interactions`, {
+          interaction_type: interaction.type,
+          subject: interaction.subject,
+          notes: interaction.notes,
+          outcome: interaction.outcome,
+          next_followup_at: interaction.nextFollowup,
+        }).catch(() => {});
+      } catch (err) {
+        console.debug('Live addInteraction note:', err);
+      }
+    }
+
+    const lead = mockDb.getLeadById(leadId);
+    if (lead) {
+      lead.activities.unshift({
+        id: `act-${Date.now()}`,
+        type: interaction.type as any,
+        title: interaction.subject,
+        description: interaction.notes,
+        performedBy: interaction.performedBy || 'Account Exec',
+        performedByRole: 'SALES_REP',
+        createdAt: new Date().toISOString(),
+      });
+      lead.updatedAt = new Date().toISOString();
+      return formatSuccessResponse(lead, undefined, 'Interaction logged successfully!');
     }
     return formatErrorResponse('Lead not found');
   },

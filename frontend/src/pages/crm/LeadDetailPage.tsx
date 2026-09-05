@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { leadsApi } from '../../services/api/leads.api';
+import { leadsApi, CreateLeadPayload } from '../../services/api/leads.api';
 import { useAuthStore } from '../../stores/auth.store';
 import { formatCurrency } from '../../utils/currency';
 import { formatDate, formatDateTime } from '../../utils/date';
@@ -22,18 +22,43 @@ import {
   ArrowRight,
   CheckCircle2,
   Clock,
+  FileText,
+  MessageSquarePlus,
+  Edit,
+  Trash2,
+  Plus,
 } from 'lucide-react';
-import { LeadConversionPayload } from '../../types/crm';
+import { LeadConversionPayload, LeadStage } from '../../types/crm';
 import { cn } from '../../utils/formatting';
 
 export function LeadDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { currency } = useAuthStore();
+  const { currency, user: currentUser } = useAuthStore();
 
   const [isConvertWizardOpen, setIsConvertWizardOpen] = React.useState(false);
   const [wizardStep, setWizardStep] = React.useState(1);
+  const [isInteractionModalOpen, setIsInteractionModalOpen] = React.useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
+
+  // Interaction state
+  const [interactionType, setInteractionType] = React.useState<'CALL' | 'EMAIL' | 'MEETING' | 'NOTE'>('CALL');
+  const [interactionSubject, setInteractionSubject] = React.useState('');
+  const [interactionNotes, setInteractionNotes] = React.useState('');
+  const [interactionOutcome, setInteractionOutcome] = React.useState('Interested');
+  const [interactionFollowup, setInteractionFollowup] = React.useState('');
+
+  // Edit lead state
+  const [editFirstName, setEditFirstName] = React.useState('');
+  const [editLastName, setEditLastName] = React.useState('');
+  const [editCompanyName, setEditCompanyName] = React.useState('');
+  const [editEmail, setEditEmail] = React.useState('');
+  const [editPhone, setEditPhone] = React.useState('');
+  const [editBudget, setEditBudget] = React.useState(1500000);
+  const [editPriority, setEditPriority] = React.useState<'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'>('HIGH');
+  const [editRequirements, setEditRequirements] = React.useState('');
 
   // Conversion wizard state
   const [tier, setTier] = React.useState<'STANDARD' | 'SILVER' | 'GOLD' | 'PLATINUM'>('GOLD');
@@ -48,6 +73,19 @@ export function LeadDetailPage() {
   });
 
   const lead = data?.data;
+
+  // Initialize edit fields when lead loads
+  React.useEffect(() => {
+    if (lead) {
+      setEditFirstName(lead.firstName || '');
+      setEditLastName(lead.lastName || '');
+      setEditCompanyName(lead.companyName || '');
+      setEditEmail(lead.email || '');
+      setEditPhone(lead.phone || '');
+      setEditBudget(lead.budget || 1500000);
+      setEditRequirements(lead.requirements || '');
+    }
+  }, [lead]);
 
   const convertMutation = useMutation({
     mutationFn: (payload: LeadConversionPayload) => leadsApi.convertLead(payload),
@@ -69,9 +107,77 @@ export function LeadDetailPage() {
         navigate(`/customers/${res.data.customer.id}`);
       }
     },
-
     onError: (err: any) => {
       toast.error(err.message || 'Failed to convert lead');
+    },
+  });
+
+  const statusMutation = useMutation({
+    mutationFn: (newStage: LeadStage) => leadsApi.updateLeadStatus(lead!.id, newStage),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lead', id] });
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      toast.success('Lead stage updated successfully');
+    },
+    onError: (err: any) => {
+      toast.error(err.message || 'Failed to update lead status');
+    },
+  });
+
+  const interactionMutation = useMutation({
+    mutationFn: () =>
+      leadsApi.addInteraction(lead!.id, {
+        type: interactionType,
+        subject: interactionSubject,
+        notes: interactionNotes,
+        outcome: interactionOutcome,
+        nextFollowup: interactionFollowup || undefined,
+        performedBy: currentUser?.name || 'Account Exec',
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lead', id] });
+      toast.success('Interaction logged successfully!');
+      setIsInteractionModalOpen(false);
+      setInteractionSubject('');
+      setInteractionNotes('');
+    },
+    onError: (err: any) => {
+      toast.error(err.message || 'Failed to log interaction');
+    },
+  });
+
+  const editMutation = useMutation({
+    mutationFn: () =>
+      leadsApi.updateLead(lead!.id, {
+        firstName: editFirstName,
+        lastName: editLastName,
+        companyName: editCompanyName,
+        email: editEmail,
+        phone: editPhone,
+        budget: editBudget,
+        priority: editPriority,
+        requirements: editRequirements,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lead', id] });
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      toast.success('Lead details updated successfully');
+      setIsEditModalOpen(false);
+    },
+    onError: (err: any) => {
+      toast.error(err.message || 'Failed to update lead');
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => leadsApi.deleteLead(lead!.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      toast.success('Lead deleted');
+      navigate('/crm/leads');
+    },
+    onError: (err: any) => {
+      toast.error(err.message || 'Failed to delete lead');
     },
   });
 
@@ -109,49 +215,95 @@ export function LeadDetailPage() {
             ]}
           />
           <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 font-display">
               {lead.companyName}
             </h1>
             <Badge variant="indigo" size="md">
               Score: {lead.score}/100
             </Badge>
-            <Badge
-              variant={
-                lead.stage === 'CONVERTED'
-                  ? 'success'
-                  : lead.stage === 'QUALIFIED'
-                  ? 'indigo'
-                  : 'warning'
-              }
-              size="md"
+            <select
+              value={lead.stage}
+              onChange={(e) => statusMutation.mutate(e.target.value as LeadStage)}
+              className="text-xs font-semibold px-2.5 py-1 rounded-xl border border-[#ecdfe8] bg-[#f5eff3] text-[#714b67] cursor-pointer"
             >
-              Stage: {lead.stage}
-            </Badge>
+              <option value="NEW">NEW</option>
+              <option value="CONTACTED">CONTACTED</option>
+              <option value="QUALIFIED">QUALIFIED</option>
+              <option value="PROPOSAL">IN PROPOSAL</option>
+              <option value="CONVERTED">CONVERTED</option>
+              <option value="UNQUALIFIED">LOST / UNQUALIFIED</option>
+            </select>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsEditModalOpen(true)}
+            className="gap-1.5 border-[#e5e7eb] text-slate-700 hover:bg-[#f3f4f6]"
+          >
+            <Edit className="w-3.5 h-3.5 text-slate-500" />
+            Edit Lead
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsInteractionModalOpen(true)}
+            className="gap-1.5 border-[#e5e7eb] text-slate-700 hover:bg-[#f3f4f6]"
+          >
+            <MessageSquarePlus className="w-3.5 h-3.5 text-[#714b67]" />
+            Log Activity
+          </Button>
+
+          {/* 1-Click Generate Commercial Quote Button */}
+          <Button
+            size="sm"
+            onClick={() =>
+              navigate(
+                `/sales/quotes/new?leadId=${lead.id}&customerName=${encodeURIComponent(
+                  lead.companyName
+                )}&budget=${lead.budget}&contactEmail=${encodeURIComponent(lead.email)}`
+              )
+            }
+            className="gap-1.5 bg-[#714b67] hover:bg-[#5e3c54] text-white shadow-subtle"
+          >
+            <FileText className="w-4 h-4" />
+            Generate Commercial Quote
+          </Button>
+
           {lead.stage !== 'CONVERTED' ? (
             <Button
+              size="sm"
               onClick={() => {
                 setWizardStep(1);
                 setIsConvertWizardOpen(true);
               }}
-              className="gap-2 shadow-sm bg-[#714b67] hover:bg-[#5e3c54] text-white"
+              className="gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm"
             >
               <UserCheck className="w-4 h-4" />
-              Convert to Customer & Trial
+              Convert to Customer
             </Button>
           ) : (
             <Button
               variant="secondary"
+              size="sm"
               onClick={() => navigate(`/customers/${lead.convertedCustomerId || 'cust-1'}`)}
               className="gap-1.5"
             >
               <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-              View Customer Account
+              View Customer
             </Button>
           )}
+
+          <button
+            onClick={() => setIsDeleteModalOpen(true)}
+            className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors"
+            title="Delete Lead"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
@@ -161,10 +313,10 @@ export function LeadDetailPage() {
         <div className="lg:col-span-2 space-y-6">
           {/* Key Details Card */}
           <Card className="border-[#e5e7eb] bg-white shadow-subtle rounded-2xl">
-            <CardHeader className="p-4 sm:p-5 border-b border-[#e5e7eb]">
+            <CardHeader className="p-4 sm:p-5 border-b border-[#e5e7eb] flex flex-row items-center justify-between">
               <CardTitle className="text-sm font-bold text-[#252733] flex items-center gap-2 font-display">
                 <Building className="w-4 h-4 text-[#714b67]" />
-                Enterprise Lead Profile
+                Enterprise Lead Profile & Commercial Scope
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4 sm:p-5 space-y-4 font-sans">
@@ -187,20 +339,23 @@ export function LeadDetailPage() {
                   <p className="font-bold text-[#252733]">{lead.companyName}</p>
                   <p className="text-slate-500">{lead.industry}</p>
                   <p className="text-slate-500">
-                    Employees: <strong className="text-[#252733]">{lead.employeeCount}</strong> • Est. Rev: <strong className="text-[#252733]">{formatCurrency(lead.annualRevenue || 0, currency, { compact: true })}</strong>
+                    Employees: <strong className="text-[#252733]">{lead.employeeCount}</strong> • Est. Rev:{' '}
+                    <strong className="text-[#252733]">
+                      {formatCurrency(lead.annualRevenue || 0, currency, { compact: true })}
+                    </strong>
                   </p>
                 </div>
 
                 <div className="space-y-1">
                   <span className="text-slate-400">Estimated Deal Budget</span>
-                  <p className="text-base font-bold text-emerald-600">
+                  <p className="text-base font-bold text-emerald-600 font-mono">
                     {formatCurrency(lead.budget, currency)}
                   </p>
                 </div>
 
                 <div className="space-y-1">
                   <span className="text-slate-400">Assigned Account Exec</span>
-                  <p className="font-bold text-[#252733]">{lead.assignedToName}</p>
+                  <p className="font-bold text-[#252733]">{lead.assignedToName || 'Ananya Sharma'}</p>
                   <p className="text-slate-500">Target Close: {formatDate(lead.expectedCloseDate)}</p>
                 </div>
               </div>
@@ -222,8 +377,17 @@ export function LeadDetailPage() {
             <CardHeader className="p-4 sm:p-5 border-b border-[#e5e7eb] flex flex-row items-center justify-between">
               <CardTitle className="text-sm font-bold flex items-center gap-2 text-[#252733] font-display">
                 <Clock className="w-4 h-4 text-[#714b67]" />
-                Interactions & Qualification Timeline
+                Interactions & Qualification Timeline ({lead.activities.length})
               </CardTitle>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setIsInteractionModalOpen(true)}
+                className="h-7 text-xs gap-1 border-[#ecdfe8] text-[#714b67] bg-[#f5eff3]"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Add Entry
+              </Button>
             </CardHeader>
             <CardContent className="p-4 sm:p-5 space-y-3 font-sans">
               {lead.activities.map((act) => (
@@ -260,17 +424,17 @@ export function LeadDetailPage() {
             </CardHeader>
             <CardContent className="p-4 space-y-3 text-xs">
               <div className="p-3 rounded-xl bg-[#f5eff3] border border-[#ecdfe8] text-[#714b67] leading-relaxed">
-                <strong>AI Assessment:</strong> Lead demonstrates high purchase intent with validated IT infrastructure budget and decision authority verified. Recommended for immediate conversion to 7-Day Enterprise Trial.
+                <strong>AI Assessment:</strong> Lead demonstrates high purchase intent with validated IT infrastructure budget and decision authority verified. Recommended for immediate conversion or quote generation.
               </div>
 
               <div className="space-y-2 pt-2">
                 <div className="flex justify-between py-1 border-b border-[#e5e7eb] text-[11px]">
                   <span className="text-slate-500">Decision Authority</span>
-                  <span className="text-emerald-600 font-bold">Verified (CTO)</span>
+                  <span className="text-emerald-600 font-bold">Verified (Decision Maker)</span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-[#e5e7eb] text-[11px]">
                   <span className="text-slate-500">Budget Adequacy</span>
-                  <span className="text-emerald-600 font-bold">₹ 4.5M Allocated</span>
+                  <span className="text-emerald-600 font-bold">{formatCurrency(lead.budget, currency)} Allocated</span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-[#e5e7eb] text-[11px]">
                   <span className="text-slate-500">Timeline Urgency</span>
@@ -278,19 +442,38 @@ export function LeadDetailPage() {
                 </div>
               </div>
 
-              {lead.stage !== 'CONVERTED' && (
+              <div className="pt-2 space-y-2">
                 <Button
-                  onClick={() => {
-                    setWizardStep(1);
-                    setIsConvertWizardOpen(true);
-                  }}
-                  className="w-full mt-3 gap-1.5 bg-[#714b67] hover:bg-[#5e3c54] text-white"
+                  onClick={() =>
+                    navigate(
+                      `/sales/quotes/new?leadId=${lead.id}&customerName=${encodeURIComponent(
+                        lead.companyName
+                      )}&budget=${lead.budget}&contactEmail=${encodeURIComponent(lead.email)}`
+                    )
+                  }
+                  className="w-full gap-1.5 bg-[#714b67] hover:bg-[#5e3c54] text-white shadow-subtle"
                   size="sm"
                 >
-                  Launch conversion wizard
+                  <FileText className="w-3.5 h-3.5" />
+                  Generate Quote for this Lead
                   <ArrowRight className="w-3.5 h-3.5" />
                 </Button>
-              )}
+
+                {lead.stage !== 'CONVERTED' && (
+                  <Button
+                    onClick={() => {
+                      setWizardStep(1);
+                      setIsConvertWizardOpen(true);
+                    }}
+                    variant="outline"
+                    className="w-full gap-1.5 border-[#ecdfe8] text-[#714b67] hover:bg-[#f5eff3]"
+                    size="sm"
+                  >
+                    <UserCheck className="w-3.5 h-3.5" />
+                    Launch Customer Conversion Wizard
+                  </Button>
+                )}
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -503,6 +686,260 @@ export function LeadDetailPage() {
               </Button>
             )}
           </div>
+        </div>
+      </Dialog>
+
+      {/* Log Activity / Interaction Modal */}
+      <Dialog
+        isOpen={isInteractionModalOpen}
+        onClose={() => setIsInteractionModalOpen(false)}
+        maxWidth="md"
+        title={
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-xl bg-[#f5eff3] text-[#714b67] border border-[#ecdfe8]">
+              <MessageSquarePlus className="w-4 h-4" />
+            </div>
+            <span className="font-display font-bold text-[#252733]">Log Sales Activity & Interaction</span>
+          </div>
+        }
+        description="Record phone calls, product demos, commercial emails, and next follow-up dates."
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!interactionSubject.trim() || !interactionNotes.trim()) {
+              toast.error('Please enter subject and interaction notes');
+              return;
+            }
+            interactionMutation.mutate();
+          }}
+          className="space-y-4 pt-2 font-sans text-xs"
+        >
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-slate-600 font-semibold block mb-1">Interaction Type</label>
+              <select
+                value={interactionType}
+                onChange={(e: any) => setInteractionType(e.target.value)}
+                className="w-full h-9 rounded-xl border border-[#e5e7eb] bg-white px-3 text-xs text-[#252733]"
+              >
+                <option value="CALL">Discovery Phone Call</option>
+                <option value="MEETING">Product Demo / Meeting</option>
+                <option value="EMAIL">Commercial Email / Proposal</option>
+                <option value="NOTE">Internal Account Note</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-slate-600 font-semibold block mb-1">Outcome</label>
+              <Input
+                value={interactionOutcome}
+                onChange={(e) => setInteractionOutcome(e.target.value)}
+                placeholder="e.g. Budget Confirmed, Follow-up Required"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-slate-600 font-semibold block mb-1">
+              Subject / Topic <span className="text-rose-500">*</span>
+            </label>
+            <Input
+              value={interactionSubject}
+              onChange={(e) => setInteractionSubject(e.target.value)}
+              placeholder="e.g. Discussed 50-node server cluster requirements"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="text-slate-600 font-semibold block mb-1">
+              Detailed Notes <span className="text-rose-500">*</span>
+            </label>
+            <textarea
+              value={interactionNotes}
+              onChange={(e) => setInteractionNotes(e.target.value)}
+              placeholder="Key discussion points, customer objections, next milestones..."
+              className="w-full h-24 rounded-xl border border-[#e5e7eb] bg-white p-3 text-xs text-[#252733] focus:outline-none focus:ring-2 focus:ring-[#714b67]/20"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="text-slate-600 font-semibold block mb-1">Next Follow-up Target Date</label>
+            <Input
+              type="datetime-local"
+              value={interactionFollowup}
+              onChange={(e) => setInteractionFollowup(e.target.value)}
+              className="font-mono text-xs"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => setIsInteractionModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              size="sm"
+              isLoading={interactionMutation.isPending}
+              className="bg-[#714b67] hover:bg-[#5e3c54] text-white"
+            >
+              Save Activity Entry
+            </Button>
+          </div>
+        </form>
+      </Dialog>
+
+      {/* Edit Lead Modal */}
+      <Dialog
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        maxWidth="lg"
+        title={
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-xl bg-[#f5eff3] text-[#714b67] border border-[#ecdfe8]">
+              <Edit className="w-4 h-4" />
+            </div>
+            <span className="font-display font-bold text-[#252733]">Edit Enterprise Lead Profile</span>
+          </div>
+        }
+        description="Update commercial parameters, budget in ₹ INR, and contact coordinates."
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            editMutation.mutate();
+          }}
+          className="space-y-4 pt-2 font-sans text-xs"
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-slate-600 font-semibold block mb-1">First Name</label>
+              <Input
+                value={editFirstName}
+                onChange={(e) => setEditFirstName(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <label className="text-slate-600 font-semibold block mb-1">Last Name</label>
+              <Input
+                value={editLastName}
+                onChange={(e) => setEditLastName(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-slate-600 font-semibold block mb-1">Company Name</label>
+              <Input
+                value={editCompanyName}
+                onChange={(e) => setEditCompanyName(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <label className="text-slate-600 font-semibold block mb-1">Work Email</label>
+              <Input
+                type="email"
+                value={editEmail}
+                onChange={(e) => setEditEmail(e.target.value)}
+                required
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="text-slate-600 font-semibold block mb-1">Contact Phone</label>
+              <Input
+                value={editPhone}
+                onChange={(e) => setEditPhone(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="text-slate-600 font-semibold block mb-1">Estimated Budget (₹ INR)</label>
+              <Input
+                type="number"
+                value={editBudget}
+                onChange={(e) => setEditBudget(Number(e.target.value))}
+              />
+            </div>
+            <div>
+              <label className="text-slate-600 font-semibold block mb-1">Priority</label>
+              <select
+                value={editPriority}
+                onChange={(e: any) => setEditPriority(e.target.value)}
+                className="w-full h-9 rounded-xl border border-[#e5e7eb] bg-white px-3 text-xs text-[#252733]"
+              >
+                <option value="LOW">LOW</option>
+                <option value="MEDIUM">MEDIUM</option>
+                <option value="HIGH">HIGH</option>
+                <option value="URGENT">URGENT</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-slate-600 font-semibold block mb-1">Commercial & Technical Requirements</label>
+            <textarea
+              value={editRequirements}
+              onChange={(e) => setEditRequirements(e.target.value)}
+              className="w-full h-24 rounded-xl border border-[#e5e7eb] bg-white p-3 text-xs text-[#252733] focus:outline-none focus:ring-2 focus:ring-[#714b67]/20"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => setIsEditModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              size="sm"
+              isLoading={editMutation.isPending}
+              className="bg-[#714b67] hover:bg-[#5e3c54] text-white"
+            >
+              Save Changes
+            </Button>
+          </div>
+        </form>
+      </Dialog>
+
+      {/* Delete Lead Modal */}
+      <Dialog
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        maxWidth="sm"
+        title="Delete Lead Record"
+        description={`Are you sure you want to delete ${lead.companyName}? This action cannot be undone.`}
+      >
+        <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setIsDeleteModalOpen(false)}
+          >
+            Cancel
+          </Button>
+          <Button
+            size="sm"
+            variant="destructive"
+            isLoading={deleteMutation.isPending}
+            onClick={() => deleteMutation.mutate()}
+          >
+            Delete Lead
+          </Button>
         </div>
       </Dialog>
     </div>
