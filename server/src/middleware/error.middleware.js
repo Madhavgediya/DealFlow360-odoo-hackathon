@@ -15,46 +15,60 @@ const errorHandler = (err, req, res, next) => {
   
   let statusCode = err.statusCode || err.status || 500;
   let message = err.message || 'Internal Server Error';
+  let errorCode = err.code || 'INTERNAL_SERVER_ERROR';
 
   // 6. JOI VALIDATION
   if (err.isJoi) {
     statusCode = 422; // Unprocessable Entity
     message = err.details && err.details[0] ? err.details[0].message : 'Validation failed';
+    errorCode = 'VALIDATION_ERROR';
   }
 
-  // 4. POSTGRESQL ERROR HANDLING (Ensure it's a DB error, often they have 'severity' or known string codes)
+  // 4. POSTGRESQL ERROR HANDLING
   if (err.code && typeof err.code === 'string' && err.code.length === 5) {
     switch (err.code) {
       case '23505': // unique_violation
-        statusCode = 409; // Conflict
+        statusCode = 409;
         message = err.detail || 'A record with that information already exists.';
+        errorCode = 'DUPLICATE_RECORD';
         break;
       case '22P02': // invalid_text_representation (e.g., bad UUID)
-        statusCode = 400; // Bad Request
+        statusCode = 400;
         message = err.message || 'Invalid identifier format.';
+        errorCode = 'INVALID_ID';
         break;
       case '23503': // foreign_key_violation
-        statusCode = 404; // Not Found
+        statusCode = 404;
         message = err.detail || 'Related resource not found.';
+        errorCode = 'RESOURCE_NOT_FOUND';
         break;
       case '23502': // not_null_violation
-        statusCode = 400; // Bad Request
+        statusCode = 400;
         message = err.detail || err.message || 'Missing required field.';
+        errorCode = 'INVALID_REQUEST';
         break;
       case '23514': // check_violation
-        statusCode = 400; // Bad Request
+        statusCode = 400;
         message = err.detail || err.message || 'Data validation check failed.';
+        errorCode = 'INVALID_REQUEST';
         break;
+      default:
+        // Other PG errors
+        statusCode = 500;
+        message = 'Internal Server Error';
+        errorCode = 'INTERNAL_SERVER_ERROR';
     }
   }
 
-  // 10. UNKNOWN ERRORS / Hide sensitive info for 500 errors
+  // Hide sensitive info for 500 errors
   if (statusCode === 500) {
     message = 'Internal Server Error';
+    errorCode = 'INTERNAL_SERVER_ERROR';
   }
 
   res.status(statusCode).json({
     success: false,
+    code: errorCode,
     message
   });
 };
