@@ -34,6 +34,13 @@ const signinSchema = Joi.object({
   }),
 });
 
+const impersonateSchema = Joi.object({
+  targetUserId: Joi.string().uuid().required().messages({
+    "string.uuid": "Target user ID must be a valid UUID",
+    "string.empty": "Target user ID is required",
+  }),
+});
+
 const validateSignup = (req, res, next) => {
   const { error } = signupSchema.validate(req.body);
   if (error) {
@@ -52,7 +59,17 @@ const validateSignin = (req, res, next) => {
   next();
 };
 
+const validateImpersonate = (req, res, next) => {
+  const { error } = impersonateSchema.validate(req.body);
+  if (error) {
+    error.isJoi = true;
+    return next(error);
+  }
+  next();
+};
+
 module.exports = {
   validateSignup,
   validateSignin,
+  validateImpersonate,
 };

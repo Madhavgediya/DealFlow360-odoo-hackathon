@@ -89,7 +89,73 @@ const signin = async (credentials, audience = 'app') => {
   return { token, user: safeUser };
 };
 
+const impersonate = async (targetUserId, requestUser, requestTokenPayload) => {
+  // 1. Verify that requester is an ADMIN
+  if (requestUser.role !== 'ADMIN') {
+    const error = new Error('Access denied: Insufficient privileges for impersonation');
+    error.statusCode = 403;
+    throw error;
+  }
+
+  // 2. Prevent nested impersonation
+  if (requestTokenPayload.isImpersonation) {
+    const error = new Error('Access denied: Cannot perform nested impersonation');
+    error.statusCode = 403;
+    throw error;
+  }
+
+  // 3. Find target user
+  const targetUser = await authRepository.findUserById(targetUserId);
+  if (!targetUser) {
+    const error = new Error('Target user not found');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  // 4. Check status
+  if (targetUser.status !== 'ACTIVE') {
+    const error = new Error('Target user account is inactive');
+    error.statusCode = 401;
+    throw error;
+  }
+
+  // 5. Tenant Security Check
+  if (targetUser.company_id !== requestUser.company_id) {
+    const error = new Error('Access denied: Target user belongs to a different organization');
+    error.statusCode = 403;
+    throw error;
+  }
+
+  // 6. Generate Delegated JWT
+  const payload = {
+    sub: targetUser.id,
+    role: targetUser.role,
+    company_id: targetUser.company_id,
+    aud: 'app',
+    isImpersonation: true,
+    impersonatedBy: requestUser.id
+  };
+
+  const token = jwt.sign(payload, process.env.JWT_SECRET, {
+    expiresIn: '1h' // Short-lived token for impersonation
+  });
+
+  // Prepare safe user object to return
+  const safeUser = {
+    id: targetUser.id,
+    name: targetUser.name,
+    email: targetUser.email,
+    role: targetUser.role,
+    status: targetUser.status,
+    created_at: targetUser.created_at,
+    updated_at: targetUser.updated_at
+  };
+
+  return { token, user: safeUser };
+};
+
 module.exports = {
   signup,
-  signin
+  signin,
+  impersonate
 };
