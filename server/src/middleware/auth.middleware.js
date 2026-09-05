@@ -30,7 +30,11 @@ const authenticate = async (req, res, next) => {
     if (error.name === 'TokenExpiredError') {
       return res.status(401).json({ success: false, message: 'Token expired' });
     }
-    return res.status(401).json({ success: false, message: 'Invalid token' });
+    if (error.name === 'JsonWebTokenError' || error.name === 'NotBeforeError') {
+      return res.status(401).json({ success: false, message: 'Invalid token' });
+    }
+    // Pass database or other unexpected errors to the global error handler
+    next(error);
   }
 };
 
