@@ -50,6 +50,9 @@ import { RetailerQuotesPage } from '../pages/retailer/RetailerQuotesPage';
 import { RetailerNegotiationPage } from '../pages/retailer/RetailerNegotiationPage';
 import { RetailerCatalogPage } from '../pages/retailer/RetailerCatalogPage';
 import { RetailerOrdersPage } from '../pages/retailer/RetailerOrdersPage';
+import { FulfillmentSplitPage } from '../pages/quotes/FulfillmentSplitPage';
+import { DiscountTiersPage } from '../pages/admin/DiscountTiersPage';
+import { SubscriptionPlansPage } from '../pages/admin/SubscriptionPlansPage';
 
 export const router = createBrowserRouter([
   {
@@ -226,6 +229,11 @@ export const router = createBrowserRouter([
         path: 'shipping/:id',
         element: <ShipmentsPage />,
       },
+      // Fulfillment Split
+      {
+        path: 'sales/quotes/:id/fulfillment-split',
+        element: <FulfillmentSplitPage />,
+      },
       // Subscriptions & Billing
       {
         path: 'subscriptions',
@@ -290,6 +298,22 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute requiredRole="ADMIN">
             <AdminUsersPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'settings/discount-tiers',
+        element: (
+          <ProtectedRoute requiredRole="ADMIN">
+            <DiscountTiersPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'settings/subscription-plans',
+        element: (
+          <ProtectedRoute requiredRole="ADMIN">
+            <SubscriptionPlansPage />
           </ProtectedRoute>
         ),
       },

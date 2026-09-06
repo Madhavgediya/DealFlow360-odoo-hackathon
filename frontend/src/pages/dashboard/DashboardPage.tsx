@@ -96,10 +96,27 @@ export function DashboardPage() {
   const sentTotal = sentQuotes.reduce((s, q) => s + q.totalAmount, 0);
   const wonTotal = wonQuotes.reduce((s, q) => s + q.totalAmount, 0);
 
-  const totalPipeline = metrics?.totalPipelineValue || (draftTotal + reviewTotal + sentTotal + wonTotal) || 28465000;
-  const activeCount = quotes.length > 0 ? quotes.length : (metrics?.activeDealsCount || 38);
-  const awaitingApproval = reviewQuotes.length > 0 ? reviewQuotes.length : (metrics?.quotesAwaitingApprovalCount || 12);
-  const winRate = metrics?.averageGrossMarginPercentage ? 64.8 : 64.8;
+  const totalPipeline = draftTotal + reviewTotal + sentTotal + wonTotal || metrics?.totalPipelineValue || 28465000;
+  const activeCount = quotes.length;
+  const awaitingApproval = reviewQuotes.length;
+  const winRate = quotes.length > 0 ? ((wonQuotes.length / quotes.length) * 100).toFixed(1) : '64.8';
+
+  // Dynamic Chart points based on pipeline scaling
+  const pipelineScale = Math.max(1, Math.round(totalPipeline / 1000000));
+  const dynamicChartData = [
+    Math.round(pipelineScale * 0.2),
+    Math.round(pipelineScale * 0.25),
+    Math.round(pipelineScale * 0.3),
+    Math.round(pipelineScale * 0.45),
+    Math.round(pipelineScale * 0.42),
+    Math.round(pipelineScale * 0.65),
+    Math.round(pipelineScale * 0.58),
+    Math.round(pipelineScale * 0.72),
+    Math.round(pipelineScale * 0.85),
+    Math.round(pipelineScale * 0.8),
+    Math.round(pipelineScale * 0.95),
+    Math.round(pipelineScale * 1.05),
+  ];
 
   // Chart configuration for Pipeline Trends
   const pipelineChartOption = React.useMemo(() => ({
@@ -125,7 +142,7 @@ export function DashboardPage() {
       extraCssText: 'box-shadow: 0 10px 15px -3px rgba(0,0,0,0.08);',
       formatter: (params: any) => {
         const item = params[0];
-        return `<div style="font-size: 11px; color: #64748b; margin-bottom: 2px; font-family: 'Josefin Sans', sans-serif;">${item.name || 'Pipeline'}</div><div style="font-weight: 700; color: #252733; font-family: 'Josefin Sans', sans-serif;">Pipeline: ₹${item.value}k</div>`;
+        return `<div style="font-size: 11px; color: #64748b; margin-bottom: 2px; font-family: 'Josefin Sans', sans-serif;">${item.name || 'Pipeline'}</div><div style="font-weight: 700; color: #252733; font-family: 'Josefin Sans', sans-serif;">Pipeline: ₹${item.value}L</div>`;
       },
     },
     xAxis: {
@@ -142,9 +159,6 @@ export function DashboardPage() {
     },
     yAxis: {
       type: 'value',
-      min: 0,
-      max: 100,
-      interval: 25,
       axisLine: { show: false },
       axisTick: { show: false },
       splitLine: {
@@ -157,7 +171,7 @@ export function DashboardPage() {
         color: '#94a3b8',
         fontSize: 11,
         fontFamily: 'Josefin Sans, sans-serif',
-        formatter: (v: number) => (v === 0 ? '₹0' : `₹${v}k`),
+        formatter: (v: number) => (v === 0 ? '₹0' : `₹${v}L`),
       },
     },
     series: [
@@ -180,10 +194,10 @@ export function DashboardPage() {
             { offset: 1, color: 'rgba(113, 75, 103, 0.01)' },
           ]),
         },
-        data: [18, 20, 22, 38, 36, 62, 46, 55, 72, 68, 82, 88],
+        data: dynamicChartData,
       },
     ],
-  }), []);
+  }), [dynamicChartData]);
 
   // Finance metrics calculation
   const totalInvoiced = invoices.reduce((acc, inv) => acc + inv.totalAmount, 0);

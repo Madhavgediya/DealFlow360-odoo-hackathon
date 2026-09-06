@@ -180,10 +180,17 @@ export const quotesApi = {
         const taxTotal = (subtotal - discountTotal) * 0.18;
         const total = subtotal - discountTotal + taxTotal;
 
+        let validUntilIso = null;
+        try {
+          if (payload.validUntil) {
+            validUntilIso = new Date(payload.validUntil).toISOString();
+          }
+        } catch (_) {}
+
         const response = await apiClient.post<ApiResponse<any>>('/quotations', {
           customer_id: payload.customerId,
           status: 'DRAFT',
-          valid_until: payload.validUntil,
+          valid_until: validUntilIso,
         });
 
         if (response.data && response.data.success && response.data.data) {
@@ -331,6 +338,163 @@ export const quotesApi = {
     quote.status = 'CONFIRMED';
     quote.updatedAt = new Date().toISOString();
     return formatSuccessResponse(quote, undefined, 'Quote confirmed as Won Deal!');
+  },
+
+  getUpsellSuggestions: async (quoteId: string, existingProductIds: string[] = []): Promise<ApiResponse<any[]>> => {
+    // Try live backend first
+    if (UUID_REGEX.test(quoteId)) {
+      try {
+        const productIds = existingProductIds.join(',');
+        const res = await apiClient.get<ApiResponse<any[]>>(`/upsell/suggestions?productIds=${productIds}&limit=5`);
+        if (res.data?.success && res.data.data?.length) {
+          return formatSuccessResponse(res.data.data);
+        }
+      } catch (err) {
+        console.debug('Live upsell note, using mock:', err);
+      }
+    }
+
+    await delay(200);
+    // Rich mock upsell suggestions
+    const mockSuggestions = [
+      {
+        productId: 'prod-upsell-1',
+        productName: 'Managed Cloud Security Suite',
+        productSku: 'SKU-CLDSEC-01',
+        categoryName: 'Security Services',
+        unitPrice: 85000,
+        unitCost: 42000,
+        marginDelta: 4.2,
+        marginDeltaDirection: 'POSITIVE' as const,
+        isPromoted: true,
+        promotionTag: '🔥 Hot Deal',
+        coPurchaseScore: 94,
+        reason: 'Purchased with 87% of Enterprise Hardware deals this quarter',
+        taxRate: 18,
+        stockAvailable: 999,
+        isRecurring: false,
+      },
+      {
+        productId: 'prod-upsell-2',
+        productName: 'Premium Managed Support Plan (Annual)',
+        productSku: 'SKU-SRVMGD-01',
+        categoryName: 'Support',
+        unitPrice: 120000,
+        unitCost: 38000,
+        marginDelta: 6.8,
+        marginDeltaDirection: 'POSITIVE' as const,
+        isPromoted: true,
+        promotionTag: '⭐ Best Margin',
+        coPurchaseScore: 91,
+        reason: 'High-margin SLA — boosts deal revenue by avg ₹1.2L with 82% renewal rate',
+        taxRate: 18,
+        stockAvailable: 999,
+        isRecurring: true,
+      },
+      {
+        productId: 'prod-upsell-3',
+        productName: 'Extended 3-Year Warranty Pack',
+        productSku: 'SKU-WARR-PREM-01',
+        categoryName: 'Warranty',
+        unitPrice: 45000,
+        unitCost: 18000,
+        marginDelta: 2.1,
+        marginDeltaDirection: 'POSITIVE' as const,
+        isPromoted: false,
+        promotionTag: null,
+        coPurchaseScore: 78,
+        reason: 'Customers who buy hardware add extended warranty 73% of the time',
+        taxRate: 18,
+        stockAvailable: 999,
+        isRecurring: false,
+      },
+      {
+        productId: 'prod-upsell-4',
+        productName: 'Cloud Sync & Backup Subscription',
+        productSku: 'SKU-CLOUDSYNC-01',
+        categoryName: 'Subscriptions',
+        unitPrice: 36000,
+        unitCost: 12000,
+        marginDelta: 3.5,
+        marginDeltaDirection: 'POSITIVE' as const,
+        isPromoted: false,
+        promotionTag: null,
+        coPurchaseScore: 72,
+        reason: 'Recurring revenue stream — improves customer LTV by 2.4x',
+        taxRate: 18,
+        stockAvailable: 999,
+        isRecurring: true,
+      },
+      {
+        productId: 'prod-upsell-5',
+        productName: 'On-Site Installation & Configuration',
+        productSku: 'SKU-INST-BASIC-01',
+        categoryName: 'Services',
+        unitPrice: 25000,
+        unitCost: 9000,
+        marginDelta: 1.8,
+        marginDeltaDirection: 'POSITIVE' as const,
+        isPromoted: false,
+        promotionTag: null,
+        coPurchaseScore: 65,
+        reason: 'Professional services reduce customer churn by 40%',
+        taxRate: 18,
+        stockAvailable: 999,
+        isRecurring: false,
+      },
+    ].filter(s => !existingProductIds.includes(s.productId));
+
+    return formatSuccessResponse(mockSuggestions, { total: mockSuggestions.length });
+  },
+
+  getFulfillmentSplit: async (quoteId: string): Promise<ApiResponse<any>> => {
+    // Try live backend
+    if (UUID_REGEX.test(quoteId)) {
+      try {
+        const res = await apiClient.get<ApiResponse<any>>(`/fulfillment/quote/${quoteId}`);
+        if (res.data?.success && res.data.data) {
+          return formatSuccessResponse(res.data.data);
+        }
+      } catch (err) {
+        console.debug('Live fulfillment split note, using mock:', err);
+      }
+    }
+
+    await delay(300);
+    // Rich mock fulfillment split
+    const quote = mockDb.getQuoteById(quoteId);
+    const split = {
+      warehouses: [
+        {
+          warehouseId: 'wh-1',
+          warehouseName: 'Mumbai Central Hub',
+          location: 'Bhandup West, Mumbai 400078',
+          items: (quote?.lines || []).map(l => ({
+            productId: l.productId,
+            productName: l.productName,
+            quantityFulfilled: Math.ceil(l.quantity * 0.6),
+          })).filter(i => i.quantityFulfilled > 0),
+          estimatedShippingCost: 2500,
+        },
+        {
+          warehouseId: 'wh-2',
+          warehouseName: 'Bengaluru Logistics Hub',
+          location: 'Electronic City Phase 1, Bengaluru 560100',
+          items: (quote?.lines || []).map(l => ({
+            productId: l.productId,
+            productName: l.productName,
+            quantityFulfilled: Math.floor(l.quantity * 0.4),
+          })).filter(i => i.quantityFulfilled > 0),
+          estimatedShippingCost: 3200,
+        },
+      ].filter(w => w.items.length > 0),
+      backordered: [],
+      shipmentCount: 2,
+      totalShippingCost: 5700,
+      fulfillmentComplete: true,
+      hasBackorder: false,
+    };
+    return formatSuccessResponse(split);
   },
 };
 

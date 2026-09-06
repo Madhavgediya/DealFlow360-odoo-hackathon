@@ -16,11 +16,10 @@ import {
   FileText,
   Repeat,
   CheckCircle2,
-  Building,
   Send,
   Sparkles,
   ArrowRight,
-  ShieldCheck,
+  Printer,
 } from 'lucide-react';
 
 export function PortalQuoteDetailPage() {
@@ -30,10 +29,10 @@ export function PortalQuoteDetailPage() {
 
   const [negotiateModalOpen, setNegotiateModalOpen] = React.useState(false);
   const [customerMessage, setCustomerMessage] = React.useState(
-    'We are ready to commit to 15 laptops upfront instead of 10. Can you match 18% volume discount on the hardware lines?'
+    'We are ready to commit to this proposal if we can get an additional volume concession on the primary line items.'
   );
-  const [customDiscount, setCustomDiscount] = React.useState<number>(18);
-  const [customQty, setCustomQty] = React.useState<number>(15);
+  const [customDiscount, setCustomDiscount] = React.useState<number>(15);
+  const [customQty, setCustomQty] = React.useState<number>(10);
 
   const { data, isLoading } = useQuery({
     queryKey: ['quote', id],
@@ -49,7 +48,7 @@ export function PortalQuoteDetailPage() {
         customerMessage,
         lineModifications: [
           {
-            productId: quote!.lines[0].productId,
+            productId: quote!.lines[0]?.productId || 'prod-1',
             requestedQuantity: customQty,
             requestedDiscount: customDiscount,
           },
@@ -62,18 +61,37 @@ export function PortalQuoteDetailPage() {
       toast.success('Your requested changes have been sent for review. Your updated quotation is under review.');
       setNegotiateModalOpen(false);
     },
+    onError: (err: any) => {
+      toast.error(err.message || 'Failed to submit negotiation request');
+    },
+  });
+
+  const confirmQuoteMutation = useMutation({
+    mutationFn: () => quotesApi.confirmQuote(quote!.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['quote', id] });
+      queryClient.invalidateQueries({ queryKey: ['quotes'] });
+      queryClient.invalidateQueries({ queryKey: ['platform-quotes'] });
+      confetti({ particleCount: 100, spread: 80, origin: { y: 0.6 } });
+      toast.success('Quotation accepted! Contract countersigned and converted to Active Sales Order.');
+    },
+    onError: (err: any) => {
+      toast.error(err.message || 'Failed to accept quote');
+    },
   });
 
   if (isLoading || !quote) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <span className="text-xs text-slate-500">Loading formal quotation...</span>
+        <span className="text-xs text-slate-500">Loading formal quotation proposal...</span>
       </div>
     );
   }
 
+  const isConfirmed = quote.status === 'CONFIRMED' || quote.status === 'APPROVED';
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-7xl mx-auto font-sans text-xs pb-10">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -81,7 +99,17 @@ export function PortalQuoteDetailPage() {
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#252733] font-display">
               Commercial Quotation: {quote.quoteNumber}
             </h1>
-            <Badge variant="indigo" size="md">{quote.status}</Badge>
+            <Badge
+              variant={
+                isConfirmed
+                  ? 'success'
+                  : quote.status === 'APPROVAL_REQUIRED' || quote.status === 'CUSTOMER_NEGOTIATION'
+                  ? 'warning'
+                  : 'indigo'
+              }
+            >
+              {quote.status.replace(/_/g, ' ')}
+            </Badge>
           </div>
           <p className="text-xs text-slate-500 mt-1 font-sans">
             Valid until {formatDate(quote.validUntil)} • Commercial Payment Terms: {quote.paymentTerms}
@@ -91,39 +119,62 @@ export function PortalQuoteDetailPage() {
         {/* Customer Actions */}
         <div className="flex items-center gap-2">
           <Button
-            variant="secondary"
+            variant="outline"
             size="sm"
-            onClick={() => setNegotiateModalOpen(true)}
-            className="gap-1.5 bg-[#f5eff3] border-[#ecdfe8] text-[#714b67] hover:bg-[#ecdfe8] rounded-xl"
+            onClick={() => window.print()}
+            className="text-xs border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl gap-1.5"
           >
-            <Repeat className="w-4 h-4" />
-            Request Changes & Custom Terms
+            <Printer className="w-3.5 h-3.5" />
+            Print Proposal
           </Button>
 
-          <Button
-            size="sm"
-            onClick={() => {
-              confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
-              toast.success('Quotation accepted! Contract countersigned.');
-            }}
-            className="gap-1.5 bg-emerald-600 hover:bg-emerald-500 shadow-sm text-white rounded-xl"
-          >
-            <CheckCircle2 className="w-4 h-4" />
-            Accept & Sign Quotation
-          </Button>
+          {!isConfirmed && (
+            <>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setNegotiateModalOpen(true)}
+                className="gap-1.5 bg-[#f5eff3] border-[#ecdfe8] text-[#714b67] hover:bg-[#ecdfe8] rounded-xl text-xs font-semibold"
+              >
+                <Repeat className="w-4 h-4" />
+                Request Changes & Concessions
+              </Button>
+
+              <Button
+                size="sm"
+                onClick={() => confirmQuoteMutation.mutate()}
+                disabled={confirmQuoteMutation.isPending}
+                className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 shadow-sm text-white rounded-xl text-xs font-semibold"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>{confirmQuoteMutation.isPending ? 'Confirming...' : 'Accept & Sign Quotation'}</span>
+              </Button>
+            </>
+          )}
+
+          {isConfirmed && (
+            <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl text-emerald-800 font-semibold text-xs">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              <span>Signed & Won Agreement</span>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Quote Review Document */}
-      <Card className="border-[#eceef5] bg-white shadow-sm overflow-hidden rounded-2xl">
-        <CardHeader className="p-5 sm:p-6 border-b border-[#eceef5] bg-slate-50/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <Card className="border-slate-200/80 bg-white shadow-subtle overflow-hidden rounded-2xl">
+        <CardHeader className="p-5 sm:p-6 border-b border-slate-100 bg-slate-50/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <span className="font-bold text-[#252733] font-mono text-sm">QuoteFlow Commercial Proposal</span>
+            <span className="font-bold text-[#252733] font-mono text-sm">DealFlow360 Commercial Proposal</span>
             <p className="text-xs text-slate-500 font-sans">Prepared for: {quote.customerName}</p>
           </div>
           <div className="text-right font-mono text-xs">
-            <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider font-sans">Net Payable Amount</span>
-            <span className="font-bold text-[#714b67] text-lg">{formatCurrency(quote.totalAmount, quote.currency)}</span>
+            <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider font-sans">
+              Net Payable (₹ INR)
+            </span>
+            <span className="font-bold text-[#714b67] text-xl">
+              {formatCurrency(quote.totalAmount, quote.currency)}
+            </span>
           </div>
         </CardHeader>
 
@@ -149,7 +200,9 @@ export function PortalQuoteDetailPage() {
                     <td className="py-3.5 text-center font-bold text-[#252733]">{l.quantity}</td>
                     <td className="py-3.5 text-right">{formatCurrency(l.unitPrice, quote.currency)}</td>
                     <td className="py-3.5 text-right text-emerald-600 font-bold">{l.discountPercentage}%</td>
-                    <td className="py-3.5 text-right font-bold text-[#252733]">{formatCurrency(l.lineTotal, quote.currency)}</td>
+                    <td className="py-3.5 text-right font-bold text-[#252733]">
+                      {formatCurrency(l.lineTotal, quote.currency)}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -157,7 +210,7 @@ export function PortalQuoteDetailPage() {
           </div>
 
           {/* Pricing Summary */}
-          <div className="pt-4 border-t border-[#eceef5] flex justify-end">
+          <div className="pt-4 border-t border-slate-100 flex justify-end">
             <div className="w-72 space-y-2 text-xs font-mono">
               <div className="flex justify-between text-slate-500 font-sans">
                 <span>Subtotal:</span>
@@ -172,7 +225,7 @@ export function PortalQuoteDetailPage() {
                 <span className="text-[#252733]">+ {formatCurrency(quote.taxAmount, quote.currency)}</span>
               </div>
               <div className="pt-2 border-t border-slate-200 flex justify-between text-sm font-bold text-[#252733] font-display">
-                <span>Total Quotation:</span>
+                <span>Total Proposal:</span>
                 <span className="text-[#714b67]">{formatCurrency(quote.totalAmount, quote.currency)}</span>
               </div>
             </div>
@@ -193,10 +246,10 @@ export function PortalQuoteDetailPage() {
         }
         description={`Quotation: ${quote.quoteNumber} • Submit adjusted quantities or requested concessions`}
       >
-        <div className="space-y-4 pt-2 text-xs">
+        <div className="space-y-4 pt-2 text-xs font-sans">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-[#252733] font-semibold block mb-1 font-sans">Requested Laptop Units</label>
+              <label className="text-[#252733] font-semibold block mb-1">Requested Target Units</label>
               <Input
                 type="number"
                 min={1}
@@ -206,7 +259,7 @@ export function PortalQuoteDetailPage() {
               />
             </div>
             <div>
-              <label className="text-[#252733] font-semibold block mb-1 font-sans">Requested Hardware Discount %</label>
+              <label className="text-[#252733] font-semibold block mb-1">Target Concession Discount %</label>
               <Input
                 type="number"
                 min={0}
@@ -219,16 +272,16 @@ export function PortalQuoteDetailPage() {
           </div>
 
           <div>
-            <label className="text-[#252733] font-semibold block mb-1 font-sans">Customer Commercial Message</label>
+            <label className="text-[#252733] font-semibold block mb-1">Commercial Message to Sales Desk</label>
             <textarea
               rows={3}
               value={customerMessage}
               onChange={(e) => setCustomerMessage(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-white p-3 text-xs text-[#252733] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#714b67]/20 focus:border-[#714b67] font-sans"
+              className="w-full rounded-xl border border-slate-200 bg-white p-3 text-xs text-[#252733] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#714b67]/20 focus:border-[#714b67]"
             />
           </div>
 
-          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 text-[11px] text-slate-600 leading-relaxed font-sans">
+          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 text-[11px] text-slate-600 leading-relaxed">
             ℹ️ Your counter-proposal will be sent directly to your assigned Account Executive and Commercial Director for fast evaluation.
           </div>
 
@@ -251,3 +304,5 @@ export function PortalQuoteDetailPage() {
     </div>
   );
 }
+
+export default PortalQuoteDetailPage;

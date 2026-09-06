@@ -365,7 +365,111 @@ const runMigration = async () => {
         reference_number VARCHAR,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );`,
-      `CREATE INDEX IF NOT EXISTS idx_payments_invoice ON payments(invoice_id);`
+      `CREATE INDEX IF NOT EXISTS idx_payments_invoice ON payments(invoice_id);`,
+
+      // ─── NEW TABLES ──────────────────────────────────────────────────────────
+
+      `CREATE TABLE IF NOT EXISTS discount_tiers (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        company_id UUID REFERENCES companies(id),
+        tier_name VARCHAR NOT NULL,
+        customer_tier VARCHAR NOT NULL DEFAULT 'DEFAULT',
+        category_name VARCHAR NOT NULL DEFAULT 'DEFAULT',
+        max_discount_percent NUMERIC(5,2) NOT NULL DEFAULT 10,
+        requires_manager_above NUMERIC(5,2) DEFAULT 10,
+        requires_finance_above NUMERIC(5,2) DEFAULT 20,
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(company_id, customer_tier, category_name)
+      );`,
+
+      `CREATE TABLE IF NOT EXISTS approval_requests (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        company_id UUID REFERENCES companies(id),
+        quotation_id UUID NOT NULL REFERENCES quotations(id) ON DELETE CASCADE,
+        requested_by UUID REFERENCES users(id),
+        risk_score NUMERIC(6,2) DEFAULT 0,
+        risk_severity VARCHAR DEFAULT 'LOW',
+        discount_percentage NUMERIC(5,2) DEFAULT 0,
+        gross_margin_percentage NUMERIC(5,2) DEFAULT 0,
+        total_amount NUMERIC(15,2) DEFAULT 0,
+        required_level VARCHAR NOT NULL DEFAULT 'SALES_MANAGER',
+        status VARCHAR NOT NULL DEFAULT 'PENDING',
+        reasons JSONB DEFAULT '[]',
+        blended_risk_details JSONB DEFAULT '{}',
+        audit_trail JSONB DEFAULT '[]',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );`,
+      `CREATE INDEX IF NOT EXISTS idx_approval_requests_company_status ON approval_requests(company_id, status);`,
+      `CREATE INDEX IF NOT EXISTS idx_approval_requests_quotation ON approval_requests(quotation_id);`,
+
+      `CREATE TABLE IF NOT EXISTS subscription_plans (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        company_id UUID REFERENCES companies(id),
+        name VARCHAR NOT NULL,
+        code VARCHAR NOT NULL,
+        billing_cycle VARCHAR NOT NULL DEFAULT 'MONTHLY' CHECK (billing_cycle IN ('MONTHLY','QUARTERLY','YEARLY')),
+        price NUMERIC(15,2) NOT NULL DEFAULT 0,
+        description TEXT,
+        proration_policy VARCHAR DEFAULT 'DAILY',
+        cancellation_policy VARCHAR DEFAULT 'END_OF_CYCLE',
+        trial_days INTEGER DEFAULT 0,
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(company_id, code)
+      );`,
+
+      `CREATE TABLE IF NOT EXISTS order_subscriptions (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        company_id UUID REFERENCES companies(id),
+        order_id UUID REFERENCES sales_orders(id) ON DELETE CASCADE,
+        product_id UUID REFERENCES products(id),
+        plan_id UUID REFERENCES subscription_plans(id),
+        status VARCHAR NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE','PAUSED','CANCELLED','TRIALING')),
+        quantity INTEGER DEFAULT 1,
+        unit_price NUMERIC(15,2) DEFAULT 0,
+        cycle_start DATE,
+        cycle_end DATE,
+        next_billing_date DATE,
+        proration_credit NUMERIC(15,2) DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );`,
+      `CREATE INDEX IF NOT EXISTS idx_order_subscriptions_order ON order_subscriptions(order_id);`,
+
+      `CREATE TABLE IF NOT EXISTS fulfillment_splits (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        company_id UUID REFERENCES companies(id),
+        order_id UUID REFERENCES sales_orders(id) ON DELETE CASCADE,
+        quotation_id UUID REFERENCES quotations(id),
+        warehouse_id UUID REFERENCES warehouses(id),
+        product_id UUID REFERENCES products(id),
+        quantity INTEGER NOT NULL DEFAULT 0,
+        status VARCHAR NOT NULL DEFAULT 'PLANNED' CHECK (status IN ('PLANNED','ALLOCATED','PICKING','SHIPPED','COMPLETED','BACKORDERED')),
+        estimated_ship_date DATE,
+        shipment_cost NUMERIC(10,2) DEFAULT 0,
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );`,
+      `CREATE INDEX IF NOT EXISTS idx_fulfillment_splits_order ON fulfillment_splits(order_id);`,
+
+      `CREATE TABLE IF NOT EXISTS upsell_rules (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        company_id UUID REFERENCES companies(id),
+        trigger_product_id UUID REFERENCES products(id) ON DELETE CASCADE,
+        suggested_product_id UUID REFERENCES products(id) ON DELETE CASCADE,
+        co_purchase_score INTEGER DEFAULT 50,
+        is_promoted BOOLEAN DEFAULT false,
+        min_margin_threshold NUMERIC(5,2) DEFAULT 0,
+        promotion_label VARCHAR,
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(company_id, trigger_product_id, suggested_product_id)
+      );`
     ];
 
     for (let i = 0; i < queries.length; i++) {

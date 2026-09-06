@@ -95,6 +95,10 @@ export function RetailerQuotesPage() {
     return matchesSearch && matchesStatus;
   });
 
+  const totalWholesaleValue = quotes.reduce((acc, q) => acc + q.totalAmount, 0);
+  const activeBidsCount = quotes.filter((q) => q.status === 'DRAFT' || q.status === 'CUSTOMER_NEGOTIATION').length;
+  const approvedBidsCount = quotes.filter((q) => q.status === 'APPROVED' || q.status === 'CONFIRMED').length;
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto font-sans text-xs pb-10">
       {/* Header */}
@@ -116,6 +120,51 @@ export function RetailerQuotesPage() {
           <Plus className="w-4 h-4" />
           Request New Volume Quote
         </Button>
+      </div>
+
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-subtle flex flex-col justify-between">
+          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+            Total Wholesale Deal Flow
+          </span>
+          <div className="mt-2 flex items-baseline justify-between">
+            <span className="text-lg sm:text-xl font-bold font-mono text-[#252733]">
+              {formatCurrency(totalWholesaleValue, 'INR')}
+            </span>
+            <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+              {quotes.length} bids
+            </span>
+          </div>
+        </div>
+
+        <div className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-subtle flex flex-col justify-between">
+          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+            Active Bids & Negotiations
+          </span>
+          <div className="mt-2 flex items-baseline justify-between">
+            <span className="text-lg sm:text-xl font-bold font-mono text-[#714b67]">
+              {activeBidsCount}
+            </span>
+            <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
+              In Review
+            </span>
+          </div>
+        </div>
+
+        <div className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-subtle flex flex-col justify-between">
+          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+            Approved / Won Orders
+          </span>
+          <div className="mt-2 flex items-baseline justify-between">
+            <span className="text-lg sm:text-xl font-bold font-mono text-emerald-600">
+              {approvedBidsCount}
+            </span>
+            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+              Ready to Order
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* Filters */}

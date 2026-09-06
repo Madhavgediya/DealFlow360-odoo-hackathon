@@ -1,10 +1,8 @@
 import * as React from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/auth.store';
-import { useTourStore } from '../stores/tour.store';
 import { BrandLogo } from '../components/common/BrandLogo';
 import { Button } from '../components/ui/button';
-import { OnboardingTour } from '../components/onboarding/OnboardingTour';
 import {
   LayoutDashboard,
   Store,
@@ -14,13 +12,11 @@ import {
   CreditCard,
   LogOut,
   Sparkles,
-  Compass,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function RetailerLayout() {
   const { user, logout } = useAuthStore();
-  const { startTour } = useTourStore();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -32,9 +28,9 @@ export function RetailerLayout() {
 
   const navItems = [
     { label: 'Dealer Workspace', path: '/retailer/dashboard', icon: LayoutDashboard },
-    { label: 'B2B Quotes & Requests', path: '/retailer/quotes', icon: FileText, dataTour: 'retailer-nav-quotes' },
+    { label: 'B2B Quotes & Requests', path: '/retailer/quotes', icon: FileText },
     { label: 'Live Negotiations', path: '/retailer/negotiations', icon: MessageSquare },
-    { label: 'Wholesale Catalog', path: '/retailer/catalog', icon: Store, dataTour: 'retailer-nav-catalog' },
+    { label: 'Wholesale Catalog', path: '/retailer/catalog', icon: Store },
     { label: 'Orders & Invoices', path: '/retailer/orders', icon: Receipt },
   ];
 
@@ -48,11 +44,8 @@ export function RetailerLayout() {
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-[#252733] font-sans flex flex-col selection:bg-[#714b67] selection:text-white no-print">
-      {/* Interactive Guided Tour Component for Retailers */}
-      <OnboardingTour />
-
       {/* Top Banner with Dealer Tier & Credit Info */}
-      <div className="bg-gradient-to-r from-amber-950 via-[#44233c] to-slate-900 text-white px-4 py-2 text-xs" data-tour="retailer-credit-banner">
+      <div className="bg-gradient-to-r from-amber-950 via-[#44233c] to-slate-900 text-white px-4 py-2 text-xs">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-3">
             <span className="px-2 py-0.5 rounded-md bg-amber-400/20 text-amber-300 font-bold border border-amber-400/30 text-[10px] uppercase flex items-center gap-1">
@@ -85,7 +78,7 @@ export function RetailerLayout() {
       <header className="bg-white border-b border-slate-200/80 sticky top-0 z-30 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-8">
-            <Link to="/retailer/dashboard" className="flex items-center gap-2" data-tour="brand-logo">
+            <Link to="/retailer/dashboard" className="flex items-center gap-2">
               <BrandLogo size="md" />
               <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200 ml-1">
                 B2B Portal
@@ -101,7 +94,6 @@ export function RetailerLayout() {
                   <Link
                     key={item.path}
                     to={item.path}
-                    data-tour={item.dataTour}
                     className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
                       isActive
                         ? 'bg-[#f5eff3] text-[#714b67] font-bold'
@@ -117,15 +109,6 @@ export function RetailerLayout() {
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Tour Guidance Trigger */}
-            <button
-              onClick={() => startTour('RETAILER')}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-semibold border border-amber-200 transition-all active:scale-95 select-none shadow-xs"
-              title="Start Portal Guidance Tour"
-            >
-              <Compass className="w-3.5 h-3.5 text-amber-600 animate-spin" style={{ animationDuration: '6s' }} />
-              <span className="hidden sm:inline">Portal Guide</span>
-            </button>
 
             <div className="flex items-center gap-2.5">
               <img

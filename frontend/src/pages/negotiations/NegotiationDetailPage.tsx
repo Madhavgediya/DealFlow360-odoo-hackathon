@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { negotiationsApi } from '../../services/api/negotiations.api';
 import { quotesApi } from '../../services/api/quotes.api';
 import { useAuthStore } from '../../stores/auth.store';
@@ -10,20 +10,32 @@ import { Breadcrumbs } from '../../components/common/Breadcrumbs';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
+import { Dialog } from '../../components/ui/dialog';
+import { Input } from '../../components/ui/input';
 import { RiskBadge } from '../../components/common/StatusBadge';
+import { toast } from 'sonner';
+import confetti from 'canvas-confetti';
 import {
   ShieldAlert,
   FileText,
   History,
   GitCompare,
+  CheckCircle2,
+  Send,
+  Sliders,
+  ArrowRight,
 } from 'lucide-react';
 import { cn } from '../../utils/formatting';
 
 export function NegotiationDetailPage() {
   const { quoteId } = useParams<{ quoteId: string }>();
   const navigate = useNavigate();
-  const { currency } = useAuthStore();
+  const queryClient = useQueryClient();
+  const { user } = useAuthStore();
   const [selectedRevisionIdx, setSelectedRevisionIdx] = React.useState<number>(0);
+  const [isCounterModalOpen, setIsCounterModalOpen] = React.useState(false);
+  const [counterDiscount, setCounterDiscount] = React.useState(12);
+  const [salesMessage, setSalesMessage] = React.useState('We can offer a special 12% enterprise discount if committed by month-end.');
 
   const { data: negData, isLoading: isNegLoading } = useQuery({
     queryKey: ['negotiation', quoteId],
@@ -38,6 +50,59 @@ export function NegotiationDetailPage() {
   const session = negData?.data;
   const quote = quoteData?.data;
 
+  // Accept Customer Counter-Proposal
+  const acceptCounterMutation = useMutation({
+    mutationFn: async () => {
+      if (!quote) throw new Error('Quote not found');
+      const updatedLines = [...quote.lines];
+      if (updatedLines.length > 0) {
+        updatedLines[0] = {
+          ...updatedLines[0],
+          discountPercentage: 18,
+          quantity: 15,
+        };
+      }
+      await quotesApi.updateQuoteLines(quote.id, updatedLines, user?.name, user?.roleTitle);
+      return quotesApi.confirmQuote(quote.id);
+    },
+    onSuccess: () => {
+      confetti({ particleCount: 100, spread: 80, origin: { y: 0.6 } });
+      queryClient.invalidateQueries({ queryKey: ['quote', quoteId] });
+      queryClient.invalidateQueries({ queryKey: ['quotes'] });
+      queryClient.invalidateQueries({ queryKey: ['platform-quotes'] });
+      queryClient.invalidateQueries({ queryKey: ['negotiation', quoteId] });
+      toast.success('Customer counter accepted! Deal won and converted to order.');
+    },
+    onError: (err: any) => {
+      toast.error(err.message || 'Failed to accept counter-proposal');
+    },
+  });
+
+  // Submit Revised Counter-Offer from Sales
+  const submitCounterOfferMutation = useMutation({
+    mutationFn: async () => {
+      if (!quote) throw new Error('Quote not found');
+      const updatedLines = [...quote.lines];
+      if (updatedLines.length > 0) {
+        updatedLines[0] = {
+          ...updatedLines[0],
+          discountPercentage: counterDiscount,
+        };
+      }
+      return quotesApi.updateQuoteLines(quote.id, updatedLines, user?.name, user?.roleTitle);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['quote', quoteId] });
+      queryClient.invalidateQueries({ queryKey: ['quotes'] });
+      queryClient.invalidateQueries({ queryKey: ['platform-quotes'] });
+      setIsCounterModalOpen(false);
+      toast.success(`Revised commercial counter-offer of ${counterDiscount}% sent to customer!`);
+    },
+    onError: (err: any) => {
+      toast.error(err.message || 'Failed to submit counter-offer');
+    },
+  });
+
   if (isNegLoading || !session) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -50,13 +115,13 @@ export function NegotiationDetailPage() {
   const revisions = quote?.revisions || [];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-7xl mx-auto font-sans text-xs pb-10">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <Breadcrumbs
             items={[
-              { label: 'Negotiations', href: '/sales/negotiations' },
+              { label: 'Quotations', href: '/sales/quotes' },
               { label: `${session.quoteNumber} Negotiation Diff` },
             ]}
           />
@@ -73,14 +138,34 @@ export function NegotiationDetailPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsCounterModalOpen(true)}
+            className="gap-1.5 border-[#ecdfe8] bg-[#f5eff3] text-[#714b67] hover:bg-[#ecdfe8] rounded-xl text-xs font-semibold"
+          >
+            <Sliders className="w-3.5 h-3.5" />
+            <span>Send Revised Offer</span>
+          </Button>
+
+          <Button
+            size="sm"
+            onClick={() => acceptCounterMutation.mutate()}
+            isLoading={acceptCounterMutation.isPending}
+            className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm rounded-xl text-xs font-semibold"
+          >
+            <CheckCircle2 className="w-4 h-4" />
+            <span>Accept Customer Counter</span>
+          </Button>
+
           <Button
             size="sm"
             onClick={() => navigate(`/sales/quotes/${quoteId || 'q-1024'}`)}
-            className="gap-1.5 shadow-sm bg-[#714b67] hover:bg-[#5e3c54] text-white"
+            className="gap-1.5 shadow-sm bg-[#714b67] hover:bg-[#5e3c54] text-white rounded-xl text-xs font-semibold"
           >
             <FileText className="w-4 h-4" />
-            Open Quote Builder
+            <span>Open Quote Builder</span>
           </Button>
         </div>
       </div>
@@ -232,11 +317,11 @@ export function NegotiationDetailPage() {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono">
                 <div>
                   <span className="text-slate-400 block text-[10px] font-sans">Net Total</span>
-                  <span className="font-bold text-[#252733]">{formatCurrency(revisions[selectedRevisionIdx].totalAmount, currency)}</span>
+                  <span className="font-bold text-[#252733]">{formatCurrency(revisions[selectedRevisionIdx].totalAmount, 'INR')}</span>
                 </div>
                 <div>
                   <span className="text-slate-400 block text-[10px] font-sans">Discount Concession</span>
-                  <span className="font-bold text-[#252733]">{formatCurrency(revisions[selectedRevisionIdx].discountAmount, currency)}</span>
+                  <span className="font-bold text-[#252733]">{formatCurrency(revisions[selectedRevisionIdx].discountAmount, 'INR')}</span>
                 </div>
                 <div>
                   <span className="text-slate-400 block text-[10px] font-sans">Gross Margin</span>
@@ -251,6 +336,64 @@ export function NegotiationDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Revised Offer Modal */}
+      <Dialog
+        isOpen={isCounterModalOpen}
+        onClose={() => setIsCounterModalOpen(false)}
+        maxWidth="md"
+        title={
+          <div className="flex items-center gap-2 text-[#252733] font-display">
+            <Sliders className="w-5 h-5 text-[#714b67]" />
+            <span>Send Revised Commercial Counter-Offer</span>
+          </div>
+        }
+        description={`Quote: ${session.quoteNumber} • Adjust discount parameters for fast deal closing`}
+      >
+        <div className="space-y-4 pt-2 font-sans text-xs">
+          <div>
+            <label className="text-[#252733] font-semibold block mb-1">Target Discount Concession %</label>
+            <div className="flex items-center gap-3">
+              <Input
+                type="number"
+                min={0}
+                max={30}
+                value={counterDiscount}
+                onChange={(e) => setCounterDiscount(Number(e.target.value))}
+                className="bg-white font-mono text-center text-[#714b67] font-bold border-slate-200 w-28"
+              />
+              <span className="text-xs text-slate-500">
+                (Standard: 10%, Floor: 18% margin)
+              </span>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-[#252733] font-semibold block mb-1">Commercial Note to Customer</label>
+            <textarea
+              rows={3}
+              value={salesMessage}
+              onChange={(e) => setSalesMessage(e.target.value)}
+              className="w-full rounded-xl border border-slate-200 bg-white p-3 text-xs text-[#252733] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#714b67]/20 focus:border-[#714b67]"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+            <Button variant="secondary" size="sm" onClick={() => setIsCounterModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => submitCounterOfferMutation.mutate()}
+              isLoading={submitCounterOfferMutation.isPending}
+              className="gap-1.5 bg-[#714b67] hover:bg-[#5e3c54] text-white shadow-sm"
+            >
+              <Send className="w-3.5 h-3.5" />
+              Send Revised Proposal
+            </Button>
+          </div>
+        </div>
+      </Dialog>
     </div>
   );
 }

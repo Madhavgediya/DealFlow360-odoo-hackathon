@@ -21,6 +21,9 @@ const invoiceRoutes = require("./src/modules/invoices/invoice.routes");
 const paymentRoutes = require("./src/modules/payments/payment.routes");
 const reportRoutes = require("./src/modules/reports/report.routes");
 const aiRoutes = require("./src/modules/ai/ai.routes");
+const approvalRoutes = require("./src/modules/approvals/approval.routes");
+const fulfillmentRoutes = require("./src/modules/fulfillment/fulfillment.routes");
+const upsellRoutes = require("./src/modules/upsell/upsell.routes");
 const errorHandler = require("./src/middleware/error.middleware");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
@@ -90,6 +93,9 @@ app.use("/api/v1/invoices", invoiceRoutes);
 app.use("/api/v1/payments", paymentRoutes);
 app.use("/api/v1/reports", reportRoutes);
 app.use("/api/v1/ai", aiRoutes);
+app.use("/api/v1/approvals", approvalRoutes);
+app.use("/api/v1/fulfillment", fulfillmentRoutes);
+app.use("/api/v1/upsell", upsellRoutes);
 
 app.get("/", (req, res) => {
   res.send("Backend server is running");

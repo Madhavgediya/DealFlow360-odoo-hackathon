@@ -1,3 +1,4 @@
+import * as React from 'react';
 import { Outlet, NavLink, Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/auth.store';
 import { BrandLogo } from '../components/common/BrandLogo';
@@ -10,14 +11,13 @@ import {
   Receipt,
   Repeat,
   LayoutDashboard,
-  ExternalLink,
   LogOut,
   User,
 } from 'lucide-react';
 import { cn } from '../utils/formatting';
 
 export function PortalLayout() {
-  const { user, switchRole } = useAuthStore();
+  const { user } = useAuthStore();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -41,36 +41,24 @@ export function PortalLayout() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#f3f4f6] text-[#252733] flex flex-col font-sans">
+    <div className="min-h-screen bg-[#f3f4f6] text-[#252733] flex flex-col font-sans no-print">
       {/* Client Portal Header */}
       <header className="h-16 border-b border-[#e5e7eb] bg-white px-4 sm:px-8 flex items-center justify-between sticky top-0 z-30 shadow-subtle">
         <div className="flex items-center gap-4">
           <Link to="/portal" className="flex items-center gap-3">
             <BrandLogo size="md" />
             <span className="px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full bg-[#f5eff3] text-[#714b67] border border-[#ecdfe8]">
-              Client Portal
+              Client Portal (₹ INR)
             </span>
           </Link>
         </div>
 
-        {/* Customer Profile & Exit back to ERP */}
+        {/* Customer Profile */}
         <div className="flex items-center gap-3">
           <div className="text-right text-xs hidden sm:block">
-            <div className="font-bold text-[#252733]">{user?.name || 'Quantum Cloud Corp'}</div>
-            <div className="text-[11px] text-[#714b67] font-medium">{user?.email || 'rohan.desai@quantumcloud.com'}</div>
+            <div className="font-bold text-[#252733]">{user?.name || 'Commercial Client'}</div>
+            <div className="text-[11px] text-[#714b67] font-medium">{user?.email || 'client@enterprise.com'}</div>
           </div>
-
-          {/* <button
-            onClick={() => {
-              switchRole('ADMIN');
-              navigate('/dashboard');
-            }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 border border-[#e5e7eb] text-xs text-[#252733] shadow-sm transition-colors"
-            title="Switch back to Internal ERP Workspace"
-          >
-            <span>Internal Workspace</span>
-            <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
-          </button> */}
 
           <button
             onClick={handleLogout}
@@ -111,9 +99,10 @@ export function PortalLayout() {
 
       {/* Portal Footer */}
       <footer className="border-t border-[#e5e7eb] bg-white py-6 px-4 text-center text-xs text-slate-400">
-        © 2026 DealFlow360 • Enterprise Commercial Operations • Secured Client Portal
+        © 2026 DealFlow360 • Enterprise Commercial Operations • Secured Client Portal (₹ INR)
       </footer>
     </div>
   );
 }
 
+export default PortalLayout;

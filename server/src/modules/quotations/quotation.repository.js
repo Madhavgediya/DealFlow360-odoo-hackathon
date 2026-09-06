@@ -80,13 +80,16 @@ const getQuotationByIdAndCompany = async (id, company_id) => {
       q.subtotal, q.discount_total, q.tax_total, q.total, q.valid_until, 
       q.created_by, q.created_at, q.updated_at,
       c.name as customer_name,
-      u.name as salesperson_name
+      u.name as salesperson_name,
+      comp.name as company_name
     FROM quotations q
     LEFT JOIN customers c ON c.id = q.customer_id
     LEFT JOIN users u ON u.id = q.created_by
-    WHERE q.id = $1 AND q.company_id = $2
+    LEFT JOIN companies comp ON comp.id = q.company_id
+    WHERE q.id = $1 ${company_id ? 'AND q.company_id = $2' : ''}
   `;
-  const result = await db.query(query, [id, company_id]);
+  const params = company_id ? [id, company_id] : [id];
+  const result = await db.query(query, params);
   return result.rows[0];
 };
 
@@ -183,9 +186,10 @@ const getQuotationLines = async (quotation_id, company_id) => {
     SELECT ql.*, p.name as product_name, p.sku, p.cost_price as unit_cost
     FROM quotation_lines ql
     JOIN products p ON p.id = ql.product_id
-    WHERE ql.quotation_id = $1 AND ql.company_id = $2
+    WHERE ql.quotation_id = $1 ${company_id ? 'AND ql.company_id = $2' : ''}
   `;
-  const result = await db.query(query, [quotation_id, company_id]);
+  const params = company_id ? [quotation_id, company_id] : [quotation_id];
+  const result = await db.query(query, params);
   return result.rows;
 };
 

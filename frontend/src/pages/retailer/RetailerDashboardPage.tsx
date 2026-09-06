@@ -49,34 +49,65 @@ export function RetailerDashboardPage() {
   });
   const products = productsResponse?.data || [];
 
-  // Mock sample active B2B negotiations if list is empty
-  const activeDealerQuotes = [
+  // Derive active dealer quotes from real quotesList
+  const dynamicDealerQuotes = React.useMemo(() => {
+    if (!quotesList || quotesList.length === 0) return [];
+    return quotesList.map((q) => {
+      const lineItem = q.lines?.[0];
+      const productTitle = lineItem ? lineItem.productName : 'Enterprise Wholesale Bundle';
+      const requestedQty = q.lines?.reduce((sum, l) => sum + (Number(l.quantity) || 1), 0) || 10;
+      const listTotal = q.subtotal || q.totalAmount * 1.15;
+      const dealerDiscountPrice = q.totalAmount;
+      const lastCounterOffer = q.totalAmount * 0.96;
+      const unreadMessages = q.status === 'CUSTOMER_NEGOTIATION' ? 2 : q.status === 'APPROVAL_REQUIRED' ? 1 : 0;
+
+      return {
+        id: q.quoteNumber || q.id,
+        rawId: q.id,
+        title: `${productTitle} (${requestedQty}x)`,
+        product: productTitle,
+        requestedQty,
+        listTotal,
+        dealerDiscountPrice,
+        status: q.status,
+        lastCounterOffer,
+        lastCounterBy: q.status === 'CUSTOMER_NEGOTIATION' ? 'Enterprise Admin' : 'Dealer Partner',
+        unreadMessages,
+      };
+    });
+  }, [quotesList]);
+
+  // Fallback dealer quotes if database is empty
+  const fallbackDealerQuotes = [
     {
       id: 'QT-2026-991',
+      rawId: 'qt-2026-991',
       title: 'Bulk Enterprise Switch & Router Units (50x)',
       product: 'EdgeX Core Switch 48-Port',
       requestedQty: 50,
       listTotal: 1250000,
       dealerDiscountPrice: 1018750,
-      status: 'NEGOTIATION_ACTIVE',
+      status: 'CUSTOMER_NEGOTIATION',
       lastCounterOffer: 980000,
-      lastCounterBy: 'Retailer',
+      lastCounterBy: 'Dealer Partner',
       unreadMessages: 2,
     },
     {
       id: 'QT-2026-984',
+      rawId: 'qt-2026-984',
       title: 'Industrial IoT Gateway Sensor Bundle (100x)',
       product: 'SensorHub Multi-Sensor Gateway',
       requestedQty: 100,
       listTotal: 800000,
       dealerDiscountPrice: 652000,
-      status: 'ADMIN_COUNTERED',
+      status: 'APPROVAL_REQUIRED',
       lastCounterOffer: 630000,
       lastCounterBy: 'Enterprise Admin',
       unreadMessages: 1,
     },
     {
       id: 'QT-2026-960',
+      rawId: 'qt-2026-960',
       title: 'Rackmount Power Distribution Units (25x)',
       product: 'PowerPro Smart PDU 32A',
       requestedQty: 25,
@@ -88,6 +119,69 @@ export function RetailerDashboardPage() {
       unreadMessages: 0,
     },
   ];
+
+  const activeDealerQuotes = dynamicDealerQuotes.length > 0 ? dynamicDealerQuotes : fallbackDealerQuotes;
+
+  // Dynamic KPI counts
+  const confirmedTotal = quotesList
+    .filter((q) => q.status === 'CONFIRMED' || q.status === 'PAID')
+    .reduce((sum, q) => sum + (Number(q.totalAmount) || 0), 0);
+
+  const availableCredit = Math.max(0, (retailerDetails.creditLimit || 500000) - confirmedTotal);
+  const activeNegotiationsCount = activeDealerQuotes.filter(
+    (q) => q.status === 'CUSTOMER_NEGOTIATION' || q.status === 'APPROVAL_REQUIRED' || q.status === 'REAPPROVAL_REQUIRED'
+  ).length;
+  const approvedQuotesCount = activeDealerQuotes.filter((q) => q.status === 'APPROVED' || q.status === 'CONFIRMED').length;
+
+  // Dynamic Featured Products
+  const featuredProducts = React.useMemo(() => {
+    if (products && products.length > 0) {
+      return products.slice(0, 3).map((p) => {
+        const mrp = Number(p.basePrice) || 25000;
+        const discountRate = retailerDetails.discountRate || 18.5;
+        const dealerPrice = Math.round(mrp * (1 - discountRate / 100));
+        const stock = p.totalStockAvailable || 120;
+        return {
+          id: p.id,
+          name: p.name,
+          sku: p.sku || `SKU-${p.id.substring(0, 6).toUpperCase()}`,
+          mrp,
+          dealerPrice,
+          moq: stock > 50 ? 10 : 5,
+          stock,
+        };
+      });
+    }
+    return [
+      {
+        id: 'prod-1',
+        name: 'EdgeX Core Enterprise Switch 48G',
+        sku: 'EDG-SW-48G',
+        mrp: 25000,
+        dealerPrice: 20375,
+        moq: 10,
+        stock: 240,
+      },
+      {
+        id: 'prod-2',
+        name: 'SensorHub Multi-Sensor IoT Gateway',
+        sku: 'IOT-GW-900',
+        mrp: 8000,
+        dealerPrice: 6520,
+        moq: 25,
+        stock: 450,
+      },
+      {
+        id: 'prod-3',
+        name: 'PowerPro Smart Rackmount PDU 32A',
+        sku: 'PDU-RK-32A',
+        mrp: 18000,
+        dealerPrice: 14670,
+        moq: 5,
+        stock: 120,
+      },
+    ];
+  }, [products, retailerDetails]);
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto font-sans text-xs pb-10">
@@ -111,7 +205,7 @@ export function RetailerDashboardPage() {
 
         <div className="flex items-center gap-2.5 relative z-10">
           <Button
-            onClick={() => navigate('/retailer/quotes')}
+            onClick={() => navigate('/retailer/quotes/new')}
             className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs shadow-md gap-1.5"
           >
             <Plus className="w-4 h-4" />
@@ -134,7 +228,7 @@ export function RetailerDashboardPage() {
           <div>
             <span className="text-slate-400 font-medium">Available Dealer Credit</span>
             <p className="text-2xl font-bold text-emerald-600 font-mono mt-0.5">
-              ₹{(retailerDetails.availableCredit || 385000).toLocaleString('en-IN')}
+              ₹{availableCredit.toLocaleString('en-IN')}
             </p>
             <span className="text-[11px] text-slate-500 font-mono mt-0.5 block">
               Limit: ₹{(retailerDetails.creditLimit || 500000).toLocaleString('en-IN')}
@@ -148,7 +242,9 @@ export function RetailerDashboardPage() {
         <Card className="p-4 bg-white border-slate-200/80 shadow-subtle rounded-2xl flex items-center justify-between">
           <div>
             <span className="text-slate-400 font-medium">Active Negotiations</span>
-            <p className="text-2xl font-bold text-amber-600 font-mono mt-0.5">2 QUOTES</p>
+            <p className="text-2xl font-bold text-amber-600 font-mono mt-0.5">
+              {activeNegotiationsCount} {activeNegotiationsCount === 1 ? 'QUOTE' : 'QUOTES'}
+            </p>
             <span className="text-[11px] text-amber-700 font-medium mt-0.5 block">
               Awaiting counter-review
             </span>
@@ -161,7 +257,9 @@ export function RetailerDashboardPage() {
         <Card className="p-4 bg-white border-slate-200/80 shadow-subtle rounded-2xl flex items-center justify-between">
           <div>
             <span className="text-slate-400 font-medium">Approved Bids Ready</span>
-            <p className="text-2xl font-bold text-[#714b67] font-mono mt-0.5">1 QUOTE</p>
+            <p className="text-2xl font-bold text-[#714b67] font-mono mt-0.5">
+              {approvedQuotesCount} {approvedQuotesCount === 1 ? 'QUOTE' : 'QUOTES'}
+            </p>
             <span className="text-[11px] text-emerald-600 font-medium mt-0.5 block">
               Ready for PO conversion
             </span>
@@ -174,7 +272,7 @@ export function RetailerDashboardPage() {
         <Card className="p-4 bg-white border-slate-200/80 shadow-subtle rounded-2xl flex items-center justify-between">
           <div>
             <span className="text-slate-400 font-medium">Tier Discount Level</span>
-            <p className="text-2xl font-bold text-[#252733] font-mono mt-0.5">{retailerDetails.discountRate}% OFF</p>
+            <p className="text-2xl font-bold text-[#252733] font-mono mt-0.5">{retailerDetails.discountRate || 18.5}% OFF</p>
             <span className="text-[11px] text-slate-500 font-mono mt-0.5 block">
               {retailerDetails.tier} VIP matrix
             </span>
@@ -208,7 +306,11 @@ export function RetailerDashboardPage() {
         </div>
 
         <div className="divide-y divide-slate-100">
-          {activeDealerQuotes.map((q) => (
+          {isLoadingQuotes && (
+            <div className="p-8 text-center text-slate-400 font-mono">Loading dealer negotiations...</div>
+          )}
+
+          {!isLoadingQuotes && activeDealerQuotes.map((q) => (
             <div
               key={q.id}
               className="p-4 hover:bg-slate-50/80 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-4"
@@ -218,14 +320,14 @@ export function RetailerDashboardPage() {
                   <span className="font-mono font-bold text-slate-800 text-xs">{q.id}</span>
                   <Badge
                     variant={
-                      q.status === 'APPROVED'
+                      q.status === 'APPROVED' || q.status === 'CONFIRMED'
                         ? 'success'
-                        : q.status === 'ADMIN_COUNTERED'
+                        : q.status === 'CUSTOMER_NEGOTIATION' || q.status === 'APPROVAL_REQUIRED'
                         ? 'warning'
                         : 'outline'
                     }
                   >
-                    {q.status.replace('_', ' ')}
+                    {q.status.replace(/_/g, ' ')}
                   </Badge>
                   {q.unreadMessages > 0 && (
                     <span className="px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 text-[10px] font-bold animate-pulse">
@@ -244,18 +346,18 @@ export function RetailerDashboardPage() {
                 <div className="text-right">
                   <span className="text-[10px] text-slate-400 block">List Price vs Dealer Bid</span>
                   <span className="text-xs text-slate-400 line-through font-mono">
-                    ₹{q.listTotal.toLocaleString('en-IN')}
+                    ₹{Math.round(q.listTotal).toLocaleString('en-IN')}
                   </span>
                   <span className="text-sm font-bold text-[#714b67] font-mono ml-2">
-                    ₹{q.dealerDiscountPrice.toLocaleString('en-IN')}
+                    ₹{Math.round(q.dealerDiscountPrice).toLocaleString('en-IN')}
                   </span>
                   <div className="text-[10px] text-emerald-600 font-semibold font-mono">
-                    Latest Counter: ₹{q.lastCounterOffer.toLocaleString('en-IN')} ({q.lastCounterBy})
+                    Latest Counter: ₹{Math.round(q.lastCounterOffer).toLocaleString('en-IN')} ({q.lastCounterBy})
                   </div>
                 </div>
 
                 <Button
-                  onClick={() => navigate(`/retailer/negotiations`)}
+                  onClick={() => navigate(q.rawId ? `/retailer/quotes/${q.rawId}` : `/retailer/negotiations`)}
                   size="sm"
                   className="bg-[#714b67] hover:bg-[#5b3751] text-white text-xs gap-1.5 shadow-sm shrink-0"
                 >
@@ -291,35 +393,7 @@ export function RetailerDashboardPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {[
-            {
-              id: 'prod-1',
-              name: 'EdgeX Core Enterprise Switch 48G',
-              sku: 'EDG-SW-48G',
-              mrp: 25000,
-              dealerPrice: 20375,
-              moq: 10,
-              stock: 240,
-            },
-            {
-              id: 'prod-2',
-              name: 'SensorHub Multi-Sensor IoT Gateway',
-              sku: 'IOT-GW-900',
-              mrp: 8000,
-              dealerPrice: 6520,
-              moq: 25,
-              stock: 450,
-            },
-            {
-              id: 'prod-3',
-              name: 'PowerPro Smart Rackmount PDU 32A',
-              sku: 'PDU-RK-32A',
-              mrp: 18000,
-              dealerPrice: 14670,
-              moq: 5,
-              stock: 120,
-            },
-          ].map((item) => (
+          {featuredProducts.map((item) => (
             <Card key={item.id} className="p-4 bg-white border-slate-200/80 shadow-subtle rounded-2xl space-y-3">
               <div className="flex items-start justify-between">
                 <div>
@@ -347,7 +421,7 @@ export function RetailerDashboardPage() {
               <Button
                 onClick={() => {
                   toast.success(`Added ${item.name} to bulk quote draft!`);
-                  navigate('/retailer/quotes');
+                  navigate(`/retailer/quotes/new?productId=${item.id}`);
                 }}
                 className="w-full bg-[#f5eff3] hover:bg-[#714b67] text-[#714b67] hover:text-white font-semibold text-xs transition-colors"
                 size="sm"

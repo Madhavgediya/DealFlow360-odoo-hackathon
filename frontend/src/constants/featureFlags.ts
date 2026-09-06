@@ -6,6 +6,5 @@ export const FEATURE_FLAGS = {
   ENABLE_NEGOTIATIONS: true,
   ENABLE_PORTAL: true,
   ENABLE_ANALYTICS: true,
-  ENABLE_DEMO_TOUR: true,
   ENABLE_ROLE_SWITCHER: true,
 };

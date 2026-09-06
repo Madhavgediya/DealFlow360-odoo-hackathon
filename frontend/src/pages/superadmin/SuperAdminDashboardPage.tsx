@@ -316,11 +316,10 @@ Platform URL:     ${window.location.origin}/login
       <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
         <button
           onClick={() => setActiveTab('COMPANIES')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-            activeTab === 'COMPANIES'
-              ? 'bg-[#714b67] text-white shadow-sm'
-              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-          }`}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${activeTab === 'COMPANIES'
+            ? 'bg-[#714b67] text-white shadow-sm'
+            : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+            }`}
         >
           <Building2 className="w-4 h-4" />
           <span>Tenant Companies ({displayCompanies.length})</span>
@@ -329,11 +328,10 @@ Platform URL:     ${window.location.origin}/login
         <button
           data-tour="platform-quotes-tab"
           onClick={() => setActiveTab('QUOTATIONS')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-            activeTab === 'QUOTATIONS'
-              ? 'bg-[#714b67] text-white shadow-sm'
-              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-          }`}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${activeTab === 'QUOTATIONS'
+            ? 'bg-[#714b67] text-white shadow-sm'
+            : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+            }`}
         >
           <FileText className="w-4 h-4" />
           <span>Live Platform Quotations ({platformQuotes.length})</span>
@@ -432,11 +430,10 @@ Platform URL:     ${window.location.origin}/login
                           </button>
                           <button
                             onClick={() => handleToggleStatus(c)}
-                            className={`p-1.5 rounded-lg transition-colors ${
-                              c.status === 'INACTIVE'
-                                ? 'text-emerald-600 hover:bg-emerald-50'
-                                : 'text-slate-400 hover:text-rose-600 hover:bg-rose-50'
-                            }`}
+                            className={`p-1.5 rounded-lg transition-colors ${c.status === 'INACTIVE'
+                              ? 'text-emerald-600 hover:bg-emerald-50'
+                              : 'text-slate-400 hover:text-rose-600 hover:bg-rose-50'
+                              }`}
                             title={c.status === 'INACTIVE' ? 'Activate Tenant' : 'Deactivate Tenant'}
                           >
                             <Power className="w-4 h-4" />
@@ -527,20 +524,18 @@ Platform URL:     ${window.location.origin}/login
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-1.5">
                           <span
-                            className={`font-mono font-bold text-xs ${
-                              q.grossMarginPercentage >= 20 ? 'text-emerald-600' : 'text-amber-600'
-                            }`}
+                            className={`font-mono font-bold text-xs ${q.grossMarginPercentage >= 20 ? 'text-emerald-600' : 'text-amber-600'
+                              }`}
                           >
                             {q.grossMarginPercentage.toFixed(1)}%
                           </span>
                           <span
-                            className={`text-[10px] px-1.5 py-0.5 rounded font-bold uppercase ${
-                              q.riskAssessment?.overallSeverity === 'HIGH' || q.riskAssessment?.overallSeverity === 'CRITICAL'
-                                ? 'bg-rose-100 text-rose-800'
-                                : q.riskAssessment?.overallSeverity === 'MEDIUM'
+                            className={`text-[10px] px-1.5 py-0.5 rounded font-bold uppercase ${q.riskAssessment?.overallSeverity === 'HIGH' || q.riskAssessment?.overallSeverity === 'CRITICAL'
+                              ? 'bg-rose-100 text-rose-800'
+                              : q.riskAssessment?.overallSeverity === 'MEDIUM'
                                 ? 'bg-amber-100 text-amber-800'
                                 : 'bg-emerald-100 text-emerald-800'
-                            }`}
+                              }`}
                           >
                             {q.riskAssessment?.overallSeverity || 'LOW'}
                           </span>
@@ -553,10 +548,10 @@ Platform URL:     ${window.location.origin}/login
                             q.status === 'CONFIRMED' || q.status === 'APPROVED'
                               ? 'success'
                               : q.status === 'APPROVAL_REQUIRED' || q.status === 'APPROVAL_IN_PROGRESS' || q.status === 'REAPPROVAL_REQUIRED'
-                              ? 'warning'
-                              : q.status === 'REJECTED'
-                              ? 'destructive'
-                              : 'outline'
+                                ? 'warning'
+                                : q.status === 'REJECTED'
+                                  ? 'destructive'
+                                  : 'outline'
                           }
                         >
                           {q.status.replace(/_/g, ' ')}
@@ -636,11 +631,10 @@ Platform URL:     ${window.location.origin}/login
             </label>
             <div className="grid grid-cols-3 gap-2">
               <label
-                className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 cursor-pointer transition-all ${
-                  businessType === 'PRODUCT'
-                    ? 'border-[#714b67] bg-[#f5eff3]'
-                    : 'border-slate-200 bg-white hover:border-slate-300'
-                }`}
+                className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 cursor-pointer transition-all ${businessType === 'PRODUCT'
+                  ? 'border-[#714b67] bg-[#f5eff3]'
+                  : 'border-slate-200 bg-white hover:border-slate-300'
+                  }`}
               >
                 <input
                   type="radio"
@@ -655,11 +649,10 @@ Platform URL:     ${window.location.origin}/login
                 </span>
               </label>
               <label
-                className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 cursor-pointer transition-all ${
-                  businessType === 'SERVICE'
-                    ? 'border-[#714b67] bg-[#f5eff3]'
-                    : 'border-slate-200 bg-white hover:border-slate-300'
-                }`}
+                className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 cursor-pointer transition-all ${businessType === 'SERVICE'
+                  ? 'border-[#714b67] bg-[#f5eff3]'
+                  : 'border-slate-200 bg-white hover:border-slate-300'
+                  }`}
               >
                 <input
                   type="radio"
@@ -674,11 +667,10 @@ Platform URL:     ${window.location.origin}/login
                 </span>
               </label>
               <label
-                className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 cursor-pointer transition-all ${
-                  businessType === 'BOTH'
-                    ? 'border-[#714b67] bg-[#f5eff3]'
-                    : 'border-slate-200 bg-white hover:border-slate-300'
-                }`}
+                className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 cursor-pointer transition-all ${businessType === 'BOTH'
+                  ? 'border-[#714b67] bg-[#f5eff3]'
+                  : 'border-slate-200 bg-white hover:border-slate-300'
+                  }`}
               >
                 <input
                   type="radio"
