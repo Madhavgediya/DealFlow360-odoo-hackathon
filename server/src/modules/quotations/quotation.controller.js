@@ -2,6 +2,14 @@ const quotationService = require('./quotation.service');
 
 const createQuotation = async (req, res, next) => {
   try {
+    // Securely derive customer_id from the authenticated context
+    if (req.user.role === 'CUSTOMER' || req.user.role === 'RETAILER') {
+      if (!req.user.customer_id) {
+        return res.status(403).json({ success: false, message: 'Customer profile not found for this user.' });
+      }
+      req.body.customer_id = req.user.customer_id;
+    }
+
     const quotation = await quotationService.createQuotation(req.body, req.user.company_id, req.user.id);
     res.status(201).json({ success: true, data: quotation });
   } catch (err) { next(err); }

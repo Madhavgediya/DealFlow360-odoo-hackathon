@@ -56,8 +56,8 @@ const authenticateFactory = (expectedAudience = 'app') => async (req, res, next)
       }
     }
 
-    // Hydrate customer_id if user is a CUSTOMER
-    if (user.role === 'CUSTOMER') {
+    // Hydrate customer_id if user is a CUSTOMER or RETAILER
+    if (user.role === 'CUSTOMER' || user.role === 'RETAILER') {
       try {
         const db = require('../config/database');
         const contactRes = await db.query(
@@ -66,6 +66,20 @@ const authenticateFactory = (expectedAudience = 'app') => async (req, res, next)
         );
         if (contactRes.rows.length > 0) {
           user.customer_id = contactRes.rows[0].customer_id;
+        } else {
+          // Auto-create customer profile for this user
+          const custRes = await db.query(
+            'INSERT INTO customers (company_id, name, status) VALUES ($1, $2, $3) RETURNING id',
+            [user.company_id, user.name || user.email, 'ACTIVE']
+          );
+          const newCustomerId = custRes.rows[0].id;
+          
+          await db.query(
+            'INSERT INTO contacts (company_id, customer_id, first_name, last_name, email, is_primary) VALUES ($1, $2, $3, $4, $5, $6)',
+            [user.company_id, newCustomerId, user.name || 'User', '', user.email, true]
+          );
+          
+          user.customer_id = newCustomerId;
         }
       } catch (err) {
         console.error('Error hydrating customer_id:', err);

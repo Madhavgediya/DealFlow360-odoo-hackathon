@@ -183,7 +183,7 @@ const addQuotationLine = async (data) => {
 
 const getQuotationLines = async (quotation_id, company_id) => {
   const query = `
-    SELECT ql.*, p.name as product_name, p.sku, p.cost_price as unit_cost
+    SELECT ql.*, p.name as product_name, p.sku
     FROM quotation_lines ql
     JOIN products p ON p.id = ql.product_id
     WHERE ql.quotation_id = $1 ${company_id ? 'AND ql.company_id = $2' : ''}
