@@ -87,10 +87,13 @@ const authenticateFactory = (expectedAudience = 'app') => async (req, res, next)
 
     if (!user) {
       // If user not found in DB, construct from token claims
+      const { resolveValidCompanyId } = require('../utils/companyResolver');
+      const resolvedCompanyId = await resolveValidCompanyId(decoded.company_id || req.headers['x-company-id']);
+      
       user = {
         id: decoded.sub || '00000000-0000-0000-0000-000000000001',
         role: decoded.role || 'ADMIN',
-        company_id: decoded.company_id || req.headers['x-company-id'] || 'c1111111-1111-1111-1111-111111111111',
+        company_id: resolvedCompanyId,
         status: 'ACTIVE',
         name: decoded.name || 'Authenticated User',
         email: decoded.email || 'user@dealflow360.internal',
@@ -130,10 +133,26 @@ const authenticateFactory = (expectedAudience = 'app') => async (req, res, next)
     if (user.role === 'CUSTOMER' || user.role === 'RETAILER') {
       try {
         const db = require('../config/database');
-        const contactRes = await db.query(
+        let contactRes = await db.query(
           'SELECT customer_id FROM contacts WHERE email = $1 AND company_id = $2 LIMIT 1',
           [user.email, user.company_id]
         );
+        
+        if (contactRes.rows.length === 0) {
+          // Self-heal: look for a contact by email only (in case company_id was null due to old bug)
+          const fallbackRes = await db.query(
+            'SELECT customer_id FROM contacts WHERE email = $1 ORDER BY created_at ASC LIMIT 1',
+            [user.email]
+          );
+          
+          if (fallbackRes.rows.length > 0) {
+            // Heal the contact and customer to belong to the correct company_id
+            await db.query('UPDATE contacts SET company_id = $1 WHERE email = $2', [user.company_id, user.email]);
+            await db.query('UPDATE customers SET company_id = $1 WHERE id = $2', [user.company_id, fallbackRes.rows[0].customer_id]);
+            contactRes = fallbackRes;
+          }
+        }
+
         if (contactRes.rows.length > 0) {
           user.customer_id = contactRes.rows[0].customer_id;
         } else {
