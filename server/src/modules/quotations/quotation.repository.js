@@ -41,9 +41,13 @@ const getQuotations = async (company_id, filters = {}) => {
   }
 
   if (filters.customer_id) {
-    conditions.push(`q.customer_id = $${i}`);
-    values.push(filters.customer_id);
-    i++;
+    if (filters.customer_id === 'UNAUTHORIZED') {
+      conditions.push(`1 = 0`);
+    } else {
+      conditions.push(`q.customer_id = $${i}`);
+      values.push(filters.customer_id);
+      i++;
+    }
   }
 
   if (filters.status && filters.status !== 'ALL') {
@@ -73,8 +77,8 @@ const getQuotations = async (company_id, filters = {}) => {
   return result.rows;
 };
 
-const getQuotationByIdAndCompany = async (id, company_id) => {
-  const query = `
+const getQuotationByIdAndContext = async (id, company_id, customer_id) => {
+  let query = `
     SELECT 
       q.id, q.company_id, q.customer_id, q.opportunity_id, q.status, 
       q.subtotal, q.discount_total, q.tax_total, q.total, q.valid_until, 
@@ -86,9 +90,26 @@ const getQuotationByIdAndCompany = async (id, company_id) => {
     LEFT JOIN customers c ON c.id = q.customer_id
     LEFT JOIN users u ON u.id = q.created_by
     LEFT JOIN companies comp ON comp.id = q.company_id
-    WHERE q.id = $1 ${company_id ? 'AND q.company_id = $2' : ''}
+    WHERE q.id = $1
   `;
-  const params = company_id ? [id, company_id] : [id];
+  
+  const params = [id];
+  let i = 2;
+  
+  if (company_id) {
+    query += ` AND q.company_id = $${i++}`;
+    params.push(company_id);
+  }
+
+  if (customer_id) {
+    if (customer_id === 'UNAUTHORIZED') {
+      query += ` AND 1 = 0`;
+    } else {
+      query += ` AND q.customer_id = $${i++}`;
+      params.push(customer_id);
+    }
+  }
+
   const result = await db.query(query, params);
   return result.rows[0];
 };
@@ -211,7 +232,7 @@ const clearQuotationLines = async (quotation_id, company_id) => {
 module.exports = {
   createQuotation,
   getQuotations,
-  getQuotationByIdAndCompany,
+  getQuotationByIdAndContext,
   updateQuotation,
   updateQuotationTotals,
   updateQuotationStatus,

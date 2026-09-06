@@ -130,7 +130,7 @@ export const quotesApi = {
       if (status && status !== 'ALL') params.status = status;
 
       const response = await apiClient.get<ApiResponse<any[]>>('/quotations', { params });
-      if (response.data && response.data.success && Array.isArray(response.data.data) && response.data.data.length > 0) {
+      if (response.data && response.data.success && Array.isArray(response.data.data)) {
         let list = response.data.data.map(adaptServerQuote);
         if (search) {
           const q = search.toLowerCase();
@@ -138,115 +138,90 @@ export const quotesApi = {
         }
         return formatSuccessResponse(list, { total: list.length });
       }
-    } catch (err) {
-      console.debug('Live quotations API note, using memory store:', err);
+      return formatErrorResponse('Invalid response from server');
+    } catch (err: any) {
+      return formatErrorResponse(err.response?.data?.message || err.message || 'Failed to fetch quotations');
     }
-
-    await delay(120);
-    const data = mockDb.getQuotes(search, status);
-    return formatSuccessResponse(data, { total: data.length });
   },
 
   getQuoteById: async (id: string): Promise<ApiResponse<Quote>> => {
-    if (UUID_REGEX.test(id)) {
-      try {
-        const response = await apiClient.get<ApiResponse<any>>(`/quotations/${id}`);
-        if (response.data && response.data.success && response.data.data) {
-          return formatSuccessResponse(adaptServerQuote(response.data.data));
-        }
-      } catch (err) {
-        console.debug('Live getQuoteById note:', err);
+    try {
+      const response = await apiClient.get<ApiResponse<any>>(`/quotations/${id}`);
+      if (response.data && response.data.success && response.data.data) {
+        return formatSuccessResponse(adaptServerQuote(response.data.data));
       }
+      return formatErrorResponse('Quote not found');
+    } catch (err: any) {
+      return formatErrorResponse(err.response?.data?.message || err.message || 'Quote not found');
     }
-
-    await delay(100);
-    const quote = mockDb.getQuoteById(id);
-    if (!quote) return formatErrorResponse('Quote not found');
-    return formatSuccessResponse(quote);
   },
 
   createQuote: async (payload: CreateQuotePayload, salespersonId?: string, salespersonName?: string): Promise<ApiResponse<Quote>> => {
-    if (UUID_REGEX.test(payload.customerId)) {
-      try {
-        // Calculate totals
-        let subtotal = 0;
-        let discountTotal = 0;
-        for (const line of payload.lines) {
-          const lineSub = line.quantity * line.unitPrice;
-          const lineDisc = lineSub * (line.discountPercentage / 100);
-          subtotal += lineSub;
-          discountTotal += lineDisc;
-        }
-        const taxTotal = (subtotal - discountTotal) * 0.18;
-        const total = subtotal - discountTotal + taxTotal;
-
-        let validUntilIso = null;
-        try {
-          if (payload.validUntil) {
-            validUntilIso = new Date(payload.validUntil).toISOString();
-          }
-        } catch (_) {}
-
-        const response = await apiClient.post<ApiResponse<any>>('/quotations', {
-          customer_id: payload.customerId,
-          status: 'DRAFT',
-          valid_until: validUntilIso,
-        });
-
-        if (response.data && response.data.success && response.data.data) {
-          const createdQuote = response.data.data;
-          
-          // Add lines if any
-          for (const line of payload.lines) {
-            if (UUID_REGEX.test(line.productId)) {
-              await apiClient.post(`/quotations/${createdQuote.id}/lines`, {
-                product_id: line.productId,
-                quantity: line.quantity,
-                unit_price: line.unitPrice,
-                discount_percent: line.discountPercentage,
-                line_total: (line.quantity * line.unitPrice) * (1 - line.discountPercentage / 100),
-              }).catch(() => {});
-            }
-          }
-
-          const adapted = adaptServerQuote({
-            ...createdQuote,
-            subtotal,
-            discount_total: discountTotal,
-            tax_total: taxTotal,
-            total,
-          });
-          return formatSuccessResponse(adapted, undefined, 'Quote created in live database!');
-        }
-      } catch (err) {
-        console.debug('Live createQuote note, using memory store:', err);
+    try {
+      let subtotal = 0;
+      let discountTotal = 0;
+      for (const line of payload.lines) {
+        const lineSub = line.quantity * line.unitPrice;
+        const lineDisc = lineSub * (line.discountPercentage / 100);
+        subtotal += lineSub;
+        discountTotal += lineDisc;
       }
-    }
+      const taxTotal = (subtotal - discountTotal) * 0.18;
+      const total = subtotal - discountTotal + taxTotal;
 
-    await delay(250);
-    const quote = mockDb.createQuote(payload, salespersonId, salespersonName);
-    return formatSuccessResponse(quote, undefined, 'Quote created successfully!');
+      let validUntilIso = null;
+      try {
+        if (payload.validUntil) {
+          validUntilIso = new Date(payload.validUntil).toISOString();
+        }
+      } catch (_) {}
+
+      const response = await apiClient.post<ApiResponse<any>>('/quotations', {
+        customer_id: payload.customerId,
+        status: 'DRAFT',
+        valid_until: validUntilIso,
+      });
+
+      if (response.data && response.data.success && response.data.data) {
+        const createdQuote = response.data.data;
+        
+        for (const line of payload.lines) {
+          if (UUID_REGEX.test(line.productId)) {
+            await apiClient.post(`/quotations/${createdQuote.id}/lines`, {
+              product_id: line.productId,
+              quantity: line.quantity,
+              unit_price: line.unitPrice,
+              discount_percent: line.discountPercentage,
+              line_total: (line.quantity * line.unitPrice) * (1 - line.discountPercentage / 100),
+            }).catch(() => {});
+          }
+        }
+
+        const adapted = adaptServerQuote({
+          ...createdQuote,
+          subtotal,
+          discount_total: discountTotal,
+          tax_total: taxTotal,
+          total,
+        });
+        return formatSuccessResponse(adapted, undefined, 'Quote created in live database!');
+      }
+      return formatErrorResponse('Failed to create quote');
+    } catch (err: any) {
+      return formatErrorResponse(err.response?.data?.message || err.message || 'Failed to create quote');
+    }
   },
 
   submitQuote: async (quoteId: string): Promise<ApiResponse<Quote>> => {
-    if (UUID_REGEX.test(quoteId)) {
-      try {
-        const response = await apiClient.post<ApiResponse<any>>(`/quotations/${quoteId}/submit`);
-        if (response.data && response.data.success && response.data.data) {
-          return formatSuccessResponse(adaptServerQuote(response.data.data), undefined, 'Quotation submitted for review');
-        }
-      } catch (err) {
-        console.debug('Live submitQuote note:', err);
+    try {
+      const response = await apiClient.post<ApiResponse<any>>(`/quotations/${quoteId}/submit`);
+      if (response.data && response.data.success && response.data.data) {
+        return formatSuccessResponse(adaptServerQuote(response.data.data), undefined, 'Quotation submitted for review');
       }
+      return formatErrorResponse('Failed to submit quote');
+    } catch (err: any) {
+      return formatErrorResponse(err.response?.data?.message || err.message || 'Failed to submit quote');
     }
-
-    const quote = mockDb.getQuoteById(quoteId);
-    if (quote) {
-      quote.status = quote.riskAssessment.requiresApproval ? 'APPROVAL_REQUIRED' : 'APPROVED';
-      quote.updatedAt = new Date().toISOString();
-      return formatSuccessResponse(quote, undefined, `Quotation status updated to ${quote.status}`);
-    }
-    return formatErrorResponse('Quote not found');
   },
 
   updateQuoteLines: async (
@@ -255,89 +230,69 @@ export const quotesApi = {
     modifierName?: string,
     modifierRole?: string
   ): Promise<ApiResponse<Quote>> => {
-    if (UUID_REGEX.test(quoteId)) {
-      try {
-        const payloadLines = lines.map(l => ({
-          product_id: l.productId,
-          quantity: l.quantity,
-          unit_price: l.unitPrice,
-          discount_percent: l.discountPercentage,
-          line_total: l.lineTotal,
-        }));
-        await apiClient.put(`/quotations/${quoteId}/lines`, payloadLines).catch(() => {});
-      } catch (err) {
-        console.debug('Live updateQuoteLines note:', err);
+    try {
+      const payloadLines = lines.map(l => ({
+        product_id: l.productId,
+        quantity: l.quantity,
+        unit_price: l.unitPrice,
+        discount_percent: l.discountPercentage,
+        line_total: l.lineTotal,
+      }));
+      const response = await apiClient.put(`/quotations/${quoteId}/lines`, payloadLines);
+      if (response.data && response.data.success && response.data.data) {
+        return formatSuccessResponse(adaptServerQuote(response.data.data), undefined, 'Quote line items updated.');
       }
+      return formatErrorResponse('Failed to update quote lines');
+    } catch (err: any) {
+      return formatErrorResponse(err.response?.data?.message || err.message || 'Failed to update quote lines');
     }
-
-    await delay(150);
-    const quote = mockDb.updateQuoteLines(quoteId, lines, modifierName, modifierRole);
-    return formatSuccessResponse(quote, undefined, 'Quote line items updated and risk recalculated.');
   },
 
   updateQuoteStatus: async (quoteId: string, status: QuoteStatus): Promise<ApiResponse<Quote>> => {
-    if (UUID_REGEX.test(quoteId)) {
-      try {
-        const response = await apiClient.patch<ApiResponse<any>>(`/quotations/${quoteId}/status`, { status });
-        if (response.data && response.data.success && response.data.data) {
-          return formatSuccessResponse(adaptServerQuote(response.data.data), undefined, `Status updated to ${status}`);
-        }
-      } catch (err) {
-        console.debug('Live updateQuoteStatus note:', err);
+    try {
+      const response = await apiClient.patch<ApiResponse<any>>(`/quotations/${quoteId}/status`, { status });
+      if (response.data && response.data.success && response.data.data) {
+        return formatSuccessResponse(adaptServerQuote(response.data.data), undefined, `Status updated to ${status}`);
       }
+      return formatErrorResponse('Failed to update status');
+    } catch (err: any) {
+      return formatErrorResponse(err.response?.data?.message || err.message || 'Failed to update status');
     }
-
-    const quote = mockDb.getQuoteById(quoteId);
-    if (quote) {
-      quote.status = status;
-      quote.updatedAt = new Date().toISOString();
-      return formatSuccessResponse(quote, undefined, `Status updated to ${status}`);
-    }
-    return formatErrorResponse('Quote not found');
   },
 
   deleteQuote: async (quoteId: string): Promise<ApiResponse<{ id: string }>> => {
-    if (UUID_REGEX.test(quoteId)) {
-      try {
-        await apiClient.delete(`/quotations/${quoteId}`);
-      } catch (err) {
-        console.debug('Live deleteQuote note:', err);
-      }
+    try {
+      await apiClient.delete(`/quotations/${quoteId}`);
+      return formatSuccessResponse({ id: quoteId }, undefined, 'Quotation removed successfully');
+    } catch (err: any) {
+      return formatErrorResponse(err.response?.data?.message || err.message || 'Failed to delete quotation');
     }
-
-    mockDb.deleteQuote(quoteId);
-    return formatSuccessResponse({ id: quoteId }, undefined, 'Quotation removed successfully');
   },
 
   confirmQuote: async (quoteId: string): Promise<ApiResponse<Quote>> => {
-    if (UUID_REGEX.test(quoteId)) {
-      try {
-        const quoteRes = await apiClient.get<ApiResponse<any>>(`/quotations/${quoteId}`);
-        if (quoteRes.data?.data) {
-          const q = quoteRes.data.data;
-          await apiClient.post('/orders/convert', {
-            quotation_id: quoteId,
-            customer_id: q.customer_id,
-            total: q.total,
-            lines: (q.lines || []).map((l: any) => ({
-              product_id: l.product_id,
-              quantity: l.quantity,
-              unit_price: l.unit_price,
-              line_total: l.line_total,
-            })),
-          }).catch(() => {});
-        }
-      } catch (err) {
-        console.debug('Live convert quote note:', err);
+    try {
+      const quoteRes = await apiClient.get<ApiResponse<any>>(`/quotations/${quoteId}`);
+      if (quoteRes.data?.data) {
+        const q = quoteRes.data.data;
+        await apiClient.post('/orders/convert', {
+          quotation_id: quoteId,
+          customer_id: q.customer_id,
+          total: q.total,
+          lines: (q.lines || []).map((l: any) => ({
+            product_id: l.product_id,
+            quantity: l.quantity,
+            unit_price: l.unit_price,
+            line_total: l.line_total,
+          })),
+        }).catch(() => {});
+        
+        q.status = 'CONFIRMED';
+        return formatSuccessResponse(adaptServerQuote(q), undefined, 'Quote confirmed as Won Deal!');
       }
+      return formatErrorResponse('Quote not found');
+    } catch (err: any) {
+      return formatErrorResponse(err.response?.data?.message || err.message || 'Failed to confirm quote');
     }
-
-    await delay(250);
-    const quote = mockDb.getQuoteById(quoteId);
-    if (!quote) return formatErrorResponse('Quote not found');
-    quote.status = 'CONFIRMED';
-    quote.updatedAt = new Date().toISOString();
-    return formatSuccessResponse(quote, undefined, 'Quote confirmed as Won Deal!');
   },
 
   getUpsellSuggestions: async (quoteId: string, existingProductIds: string[] = []): Promise<ApiResponse<any[]>> => {
