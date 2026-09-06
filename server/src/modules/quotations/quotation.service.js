@@ -73,8 +73,8 @@ const getQuotations = async (companyId, filters) => {
   return quotationRepository.getQuotations(companyId, filters);
 };
 
-const getQuotationById = async (id, companyId) => {
-  const quotation = await quotationRepository.getQuotationByIdAndCompany(id, companyId);
+const getQuotationById = async (id, companyId, customerId) => {
+  const quotation = await quotationRepository.getQuotationByIdAndContext(id, companyId, customerId);
   if (!quotation) throw createAppError('Quotation not found', 404, 'QUOTATION_NOT_FOUND');
   
   const lines = await quotationRepository.getQuotationLines(id, companyId);
@@ -83,8 +83,8 @@ const getQuotationById = async (id, companyId) => {
   return quotation;
 };
 
-const updateQuotation = async (id, data, companyId) => {
-  const quotation = await quotationRepository.getQuotationByIdAndCompany(id, companyId);
+const updateQuotation = async (id, data, companyId, customerId) => {
+  const quotation = await quotationRepository.getQuotationByIdAndContext(id, companyId, customerId);
   if (!quotation) throw createAppError('Quotation not found', 404, 'QUOTATION_NOT_FOUND');
 
   const updated = await quotationRepository.updateQuotation(id, companyId, data);
@@ -93,15 +93,15 @@ const updateQuotation = async (id, data, companyId) => {
   return updated;
 };
 
-const updateQuotationStatus = async (id, status, companyId) => {
-  const quotation = await quotationRepository.getQuotationByIdAndCompany(id, companyId);
+const updateQuotationStatus = async (id, status, companyId, customerId) => {
+  const quotation = await quotationRepository.getQuotationByIdAndContext(id, companyId, customerId);
   if (!quotation) throw createAppError('Quotation not found', 404, 'QUOTATION_NOT_FOUND');
 
   return quotationRepository.updateQuotationStatus(id, companyId, status);
 };
 
-const deleteQuotation = async (id, companyId) => {
-  const quotation = await quotationRepository.getQuotationByIdAndCompany(id, companyId);
+const deleteQuotation = async (id, companyId, customerId) => {
+  const quotation = await quotationRepository.getQuotationByIdAndContext(id, companyId, customerId);
   if (!quotation) throw createAppError('Quotation not found', 404, 'QUOTATION_NOT_FOUND');
 
   await quotationRepository.clearQuotationLines(id, companyId);
@@ -135,8 +135,8 @@ const recalculateQuotationTotals = async (quotationId, companyId) => {
   });
 };
 
-const addQuotationLine = async (quotationId, data, companyId) => {
-  const quotation = await quotationRepository.getQuotationByIdAndCompany(quotationId, companyId);
+const addQuotationLine = async (quotationId, data, companyId, customerId) => {
+  const quotation = await quotationRepository.getQuotationByIdAndContext(quotationId, companyId, customerId);
   if (!quotation) throw createAppError('Quotation not found', 404, 'QUOTATION_NOT_FOUND');
   
   if (quotation.status !== 'DRAFT') {
@@ -179,8 +179,8 @@ const addQuotationLine = async (quotationId, data, companyId) => {
   return line;
 };
 
-const replaceQuotationLines = async (quotationId, linesData, companyId) => {
-  const quotation = await quotationRepository.getQuotationByIdAndCompany(quotationId, companyId);
+const replaceQuotationLines = async (quotationId, linesData, companyId, customerId) => {
+  const quotation = await quotationRepository.getQuotationByIdAndContext(quotationId, companyId, customerId);
   if (!quotation) throw createAppError('Quotation not found', 404, 'QUOTATION_NOT_FOUND');
 
   // Clear existing lines
@@ -213,11 +213,11 @@ const replaceQuotationLines = async (quotationId, linesData, companyId) => {
 
   // Recalculate
   await recalculateQuotationTotals(quotationId, companyId);
-  return getQuotationById(quotationId, companyId);
+  return getQuotationById(quotationId, companyId, customerId);
 };
 
-const removeQuotationLine = async (quotationId, lineId, companyId) => {
-  const quotation = await quotationRepository.getQuotationByIdAndCompany(quotationId, companyId);
+const removeQuotationLine = async (quotationId, lineId, companyId, customerId) => {
+  const quotation = await quotationRepository.getQuotationByIdAndContext(quotationId, companyId, customerId);
   if (!quotation) throw createAppError('Quotation not found', 404, 'QUOTATION_NOT_FOUND');
 
   if (quotation.status !== 'DRAFT') {
@@ -228,8 +228,8 @@ const removeQuotationLine = async (quotationId, lineId, companyId) => {
   await recalculateQuotationTotals(quotationId, companyId);
 };
 
-const submitQuotation = async (quotationId, companyId) => {
-  const quotation = await quotationRepository.getQuotationByIdAndCompany(quotationId, companyId);
+const submitQuotation = async (quotationId, companyId, customerId) => {
+  const quotation = await quotationRepository.getQuotationByIdAndContext(quotationId, companyId, customerId);
   if (!quotation) throw createAppError('Quotation not found', 404, 'QUOTATION_NOT_FOUND');
 
   if (quotation.status !== 'DRAFT') {
