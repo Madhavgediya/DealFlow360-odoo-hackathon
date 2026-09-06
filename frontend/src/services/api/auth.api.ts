@@ -82,10 +82,13 @@ export const authApi = {
       });
 
       if (response.data && response.data.success && response.data.data) {
-        const { user: rawUser } = response.data.data;
+        const { token, user: rawUser } = response.data.data;
         const user = enrichServerUser(rawUser);
         
-        useAuthStore.getState().login(user);
+        if (token) {
+          localStorage.setItem('dealflow360_jwt', token);
+        }
+        useAuthStore.getState().login(user, token);
         return formatSuccessResponse({ user }, undefined, response.data.message || 'Signed in successfully');
       }
 
@@ -191,11 +194,10 @@ export const authApi = {
         return formatSuccessResponse(user);
       }
 
-      useAuthStore.getState().logout();
       return formatErrorResponse('Failed to fetch profile');
     } catch (err: any) {
-      useAuthStore.getState().logout();
       if (err.response?.status === 401) {
+        localStorage.removeItem('dealflow360_jwt');
         return formatErrorResponse('Session expired');
       }
       return formatErrorResponse('Network Error: Unable to connect to server');

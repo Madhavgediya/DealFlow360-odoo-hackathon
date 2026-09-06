@@ -9,10 +9,13 @@ const { apiLimiter } = require('../../middleware/rateLimit.middleware');
 router.use(authenticate);
 router.use(apiLimiter);
 
-router.post('/', requireRole(['ADMIN', 'PRODUCT_MANAGER']), validateCreate, ctrl.createProduct);
+const ALLOWED_PRODUCT_MANAGERS = ['SUPERADMIN', 'SUPER_ADMIN', 'ADMIN', 'SALES_MANAGER', 'PRODUCT_MANAGER'];
+
+router.post('/', requireRole(ALLOWED_PRODUCT_MANAGERS), validateCreate, ctrl.createProduct);
 router.get('/', ctrl.getProducts);
 router.get('/:id', validateUUID('id'), ctrl.getProductById);
-router.put('/:id', validateUUID('id'), requireRole(['ADMIN', 'PRODUCT_MANAGER']), validateUpdate, ctrl.updateProduct);
-router.delete('/:id', validateUUID('id'), requireRole(['ADMIN', 'PRODUCT_MANAGER']), ctrl.deleteProduct);
+router.put('/:id', validateUUID('id'), requireRole(ALLOWED_PRODUCT_MANAGERS), validateUpdate, ctrl.updateProduct);
+router.patch('/:id', validateUUID('id'), requireRole(ALLOWED_PRODUCT_MANAGERS), validateUpdate, ctrl.updateProduct);
+router.delete('/:id', validateUUID('id'), requireRole(ALLOWED_PRODUCT_MANAGERS), ctrl.deleteProduct);
 
 module.exports = router;

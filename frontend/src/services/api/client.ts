@@ -12,14 +12,29 @@ export const apiClient = axios.create({
 
 import { useAuthStore } from '../../stores/auth.store';
 
-// Intercept requests to attach trace ID and company context
+// Intercept requests to attach trace ID, authorization token, and company/user context
 apiClient.interceptors.request.use((config) => {
   config.headers['X-Request-ID'] = `req-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
   
+  // Attach JWT token from localStorage if available
+  const token = localStorage.getItem('dealflow360_jwt');
+  if (token && !config.headers['Authorization']) {
+    config.headers['Authorization'] = `Bearer ${token}`;
+  }
+
   try {
-    const companyId = useAuthStore.getState().company?.id;
+    const authState = useAuthStore.getState();
+    const companyId = authState.company?.id;
+    const user = authState.user;
+
     if (companyId) {
       config.headers['x-company-id'] = companyId;
+    }
+    if (user?.role && !config.headers['x-user-role']) {
+      config.headers['x-user-role'] = user.role;
+    }
+    if (user?.id && !config.headers['x-user-id']) {
+      config.headers['x-user-id'] = user.id;
     }
   } catch (e) {
     // Ignore errors during store access

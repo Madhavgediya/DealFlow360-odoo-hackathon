@@ -42,10 +42,23 @@ const getCustomers = async (company_id, filters = {}) => {
   return result.rows;
 };
 
+const { resolveValidCompanyId, uuidRegex } = require('../../utils/companyResolver');
+
 const getCustomerByIdAndCompany = async (id, company_id) => {
+  if (!uuidRegex.test(id)) return null;
+  const resolvedCompanyId = await resolveValidCompanyId(company_id);
   const result = await db.query(
-    `SELECT ${CUSTOMER_FIELDS} FROM customers WHERE id = $1 AND company_id = $2`,
-    [id, company_id]
+    `SELECT ${CUSTOMER_FIELDS} FROM customers WHERE id = $1 AND (company_id = $2 OR company_id IS NULL OR company_id = (SELECT id FROM companies ORDER BY created_at ASC LIMIT 1))`,
+    [id, resolvedCompanyId]
+  );
+  return result.rows[0];
+};
+
+const getCustomerById = async (id) => {
+  if (!uuidRegex.test(id)) return null;
+  const result = await db.query(
+    `SELECT ${CUSTOMER_FIELDS} FROM customers WHERE id = $1`,
+    [id]
   );
   return result.rows[0];
 };
@@ -86,6 +99,7 @@ module.exports = {
   createCustomer,
   getCustomers,
   getCustomerByIdAndCompany,
+  getCustomerById,
   updateCustomer,
   deleteCustomer
 };

@@ -1,8 +1,8 @@
 const Joi = require('joi');
 
 const createSchema = Joi.object({
-  customer_id: Joi.string().uuid().required(),
-  opportunity_id: Joi.string().uuid().allow(null, ''),
+  customer_id: Joi.string().allow(null, '').optional(),
+  opportunity_id: Joi.string().allow(null, '').optional(),
   valid_until: Joi.any().allow(null, ''),
   status: Joi.string().allow(null, ''),
   notes: Joi.string().allow(null, ''),
@@ -10,8 +10,8 @@ const createSchema = Joi.object({
 }).unknown(true);
 
 const addLineSchema = Joi.object({
-  product_id: Joi.string().uuid().required(),
-  price_list_id: Joi.string().uuid().allow(null, ''),
+  product_id: Joi.string().allow(null, '').optional(),
+  price_list_id: Joi.string().allow(null, '').optional(),
   quantity: Joi.number().min(1).default(1),
   discount_percent: Joi.number().min(0).max(100).default(0),
   unit_price: Joi.number().optional(),

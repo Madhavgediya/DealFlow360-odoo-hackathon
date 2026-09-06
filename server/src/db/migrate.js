@@ -469,7 +469,15 @@ const runMigration = async () => {
         is_active BOOLEAN DEFAULT true,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         UNIQUE(company_id, trigger_product_id, suggested_product_id)
-      );`
+      );`,
+      `ALTER TABLE products ADD COLUMN IF NOT EXISTS type VARCHAR DEFAULT 'PHYSICAL';`,
+      `ALTER TABLE products ADD COLUMN IF NOT EXISTS cost_price NUMERIC(15,2) DEFAULT 0;`,
+      `ALTER TABLE products ADD COLUMN IF NOT EXISTS preferred_vendor_id VARCHAR;`,
+      `ALTER TABLE products ADD COLUMN IF NOT EXISTS service_provider VARCHAR;`,
+      `ALTER TABLE products ADD COLUMN IF NOT EXISTS service_sla VARCHAR;`,
+      `ALTER TABLE products ADD COLUMN IF NOT EXISTS stock INTEGER DEFAULT 100;`,
+      `ALTER TABLE products ADD COLUMN IF NOT EXISTS unit VARCHAR DEFAULT 'Units';`,
+      `ALTER TABLE products ADD COLUMN IF NOT EXISTS image_url TEXT;`
     ];
 
     for (let i = 0; i < queries.length; i++) {

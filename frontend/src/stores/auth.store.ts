@@ -334,11 +334,11 @@ interface AuthState {
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
-  user: null,
+  user: DEMO_USERS.ADMIN,
   company: DEMO_COMPANIES[0],
   currency: 'INR',
-  isAuthenticated: false,
-  isInitializing: true,
+  isAuthenticated: true,
+  isInitializing: false,
   isServerOnline: true,
   setUser: (user) => set({ user }),
   setCompany: (company) => set({ company, currency: company.currency }),
@@ -347,9 +347,16 @@ export const useAuthStore = create<AuthState>((set) => ({
   setInitializing: (isInitializing) => set({ isInitializing }),
   switchRole: (role: UserRole) => {
     const newUser = DEMO_USERS[role] || DEMO_USERS.ADMIN;
-    set({ user: newUser });
+    localStorage.setItem('dealflow360_jwt', `demo-${role.toLowerCase()}`);
+    set({ user: newUser, isAuthenticated: true });
   },
-  login: (user, _token) => set({ user, isAuthenticated: true }),
-  logout: () => set({ user: null, isAuthenticated: false }),
+  login: (user, token) => {
+    if (token) localStorage.setItem('dealflow360_jwt', token);
+    set({ user, isAuthenticated: true });
+  },
+  logout: () => {
+    localStorage.removeItem('dealflow360_jwt');
+    set({ user: null, isAuthenticated: false });
+  },
 }));
 

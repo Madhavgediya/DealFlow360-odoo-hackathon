@@ -37,6 +37,8 @@ export interface Product {
   subscriptionBillingPeriod?: 'MONTHLY' | 'ANNUAL';
   upsellProductIds?: string[];
   preferredVendorId?: string;
+  serviceProviderName?: string;
+  serviceSla?: string;
   totalStockAvailable?: number;
   createdAt: string;
   updatedAt: string;

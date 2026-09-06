@@ -1,4 +1,5 @@
 const db = require('../../config/database');
+const { resolveValidCompanyId, uuidRegex } = require('../../utils/companyResolver');
 
 const QUOTATION_FIELDS = `
   id, company_id, customer_id, opportunity_id, status, subtotal, discount_total, tax_total, total, valid_until, created_by, created_at, updated_at
@@ -10,6 +11,33 @@ const QUOTATION_LINE_FIELDS = `
 
 const createQuotation = async (data) => {
   const { company_id, customer_id, opportunity_id, status, valid_until, created_by } = data;
+  const resolvedCompanyId = await resolveValidCompanyId(company_id);
+
+  let validUserId = null;
+  if (created_by && uuidRegex.test(created_by)) {
+    const userCheck = await db.query('SELECT id FROM users WHERE id = $1', [created_by]);
+    if (userCheck.rows.length > 0) {
+      validUserId = userCheck.rows[0].id;
+    }
+  }
+
+  if (!validUserId) {
+    const defaultUser = await db.query(
+      'SELECT id FROM users WHERE company_id = $1 OR company_id IS NULL ORDER BY created_at ASC LIMIT 1',
+      [resolvedCompanyId]
+    );
+    if (defaultUser.rows.length > 0) {
+      validUserId = defaultUser.rows[0].id;
+    }
+  }
+
+  let validOpportunityId = null;
+  if (opportunity_id && uuidRegex.test(opportunity_id)) {
+    const oppCheck = await db.query('SELECT id FROM opportunities WHERE id = $1', [opportunity_id]);
+    if (oppCheck.rows.length > 0) {
+      validOpportunityId = oppCheck.rows[0].id;
+    }
+  }
 
   const query = `
     INSERT INTO quotations (
@@ -18,25 +46,26 @@ const createQuotation = async (data) => {
     RETURNING ${QUOTATION_FIELDS}
   `;
   const values = [
-    company_id,
+    resolvedCompanyId,
     customer_id,
-    opportunity_id || null,
+    validOpportunityId,
     status || 'DRAFT',
     valid_until || null,
-    created_by || null
+    validUserId
   ];
   const result = await db.query(query, values);
   return result.rows[0];
 };
 
 const getQuotations = async (company_id, filters = {}) => {
+  const resolvedCompanyId = await resolveValidCompanyId(company_id);
   const conditions = [];
   const values = [];
   let i = 1;
 
-  if (company_id) {
+  if (resolvedCompanyId) {
     conditions.push(`q.company_id = $${i}`);
-    values.push(company_id);
+    values.push(resolvedCompanyId);
     i++;
   }
 

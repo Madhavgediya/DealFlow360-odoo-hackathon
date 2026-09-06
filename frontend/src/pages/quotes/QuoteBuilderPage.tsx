@@ -979,10 +979,19 @@ export function QuoteBuilderPage() {
               >
                 <div>
                   <span className="font-bold text-[#252733] block">{p.name}</span>
-                  <div className="text-[11px] text-slate-400 font-mono flex items-center gap-2 mt-0.5">
+                  <div className="text-[11px] text-slate-400 font-mono flex items-center gap-2 mt-0.5 flex-wrap">
                     <span>SKU: {p.sku}</span>
                     <span>• Category: {p.categoryName}</span>
-                    <span>• Stock: {p.totalStockAvailable || 50} Units</span>
+                    {p.type === 'SERVICE' ? (
+                      <span className="text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200 font-medium">
+                        Service {p.serviceProviderName ? `(${p.serviceProviderName})` : ''}
+                      </span>
+                    ) : p.type === 'SUBSCRIPTION' ? (
+                      <span className="text-indigo-700 bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-200 font-medium">
+                        SaaS
+                      </span>
+                    ) : null}
+                    <span>• Stock: {p.totalStockAvailable || 50} {p.unit || 'Units'}</span>
                   </div>
                 </div>
 

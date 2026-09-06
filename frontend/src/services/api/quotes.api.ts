@@ -166,66 +166,74 @@ export const quotesApi = {
   },
 
   createQuote: async (payload: CreateQuotePayload, salespersonId?: string, salespersonName?: string): Promise<ApiResponse<Quote>> => {
-    if (UUID_REGEX.test(payload.customerId)) {
-      try {
-        // Calculate totals
-        let subtotal = 0;
-        let discountTotal = 0;
-        for (const line of payload.lines) {
-          const lineSub = line.quantity * line.unitPrice;
-          const lineDisc = lineSub * (line.discountPercentage / 100);
-          subtotal += lineSub;
-          discountTotal += lineDisc;
-        }
-        const taxTotal = (subtotal - discountTotal) * 0.18;
-        const total = subtotal - discountTotal + taxTotal;
-
-        let validUntilIso = null;
-        try {
-          if (payload.validUntil) {
-            validUntilIso = new Date(payload.validUntil).toISOString();
-          }
-        } catch (_) {}
-
-        const response = await apiClient.post<ApiResponse<any>>('/quotations', {
-          customer_id: payload.customerId,
-          status: 'DRAFT',
-          valid_until: validUntilIso,
-        });
-
-        if (response.data && response.data.success && response.data.data) {
-          const createdQuote = response.data.data;
-          
-          // Add lines if any
-          for (const line of payload.lines) {
-            if (UUID_REGEX.test(line.productId)) {
-              await apiClient.post(`/quotations/${createdQuote.id}/lines`, {
-                product_id: line.productId,
-                quantity: line.quantity,
-                unit_price: line.unitPrice,
-                discount_percent: line.discountPercentage,
-                line_total: (line.quantity * line.unitPrice) * (1 - line.discountPercentage / 100),
-              }).catch(() => {});
-            }
-          }
-
-          const adapted = adaptServerQuote({
-            ...createdQuote,
-            subtotal,
-            discount_total: discountTotal,
-            tax_total: taxTotal,
-            total,
-          });
-          return formatSuccessResponse(adapted, undefined, 'Quote created in live database!');
-        }
-      } catch (err) {
-        console.debug('Live createQuote note, using memory store:', err);
+    try {
+      // Calculate totals
+      let subtotal = 0;
+      let discountTotal = 0;
+      for (const line of payload.lines) {
+        const lineSub = line.quantity * line.unitPrice;
+        const lineDisc = lineSub * (line.discountPercentage / 100);
+        subtotal += lineSub;
+        discountTotal += lineDisc;
       }
+      const taxTotal = (subtotal - discountTotal) * 0.18;
+      const total = subtotal - discountTotal + taxTotal;
+
+      let validUntilIso = null;
+      try {
+        if (payload.validUntil) {
+          validUntilIso = new Date(payload.validUntil).toISOString();
+        }
+      } catch (_) {}
+
+      // If customerId is not a valid UUID, omit it so server uses default or resolves from session
+      const serverCustomerId = payload.customerId && UUID_REGEX.test(payload.customerId) ? payload.customerId : undefined;
+
+      const response = await apiClient.post<ApiResponse<any>>('/quotations', {
+        customer_id: serverCustomerId,
+        status: 'DRAFT',
+        valid_until: validUntilIso,
+      });
+
+      if (response.data && response.data.success && response.data.data) {
+        const createdQuote = response.data.data;
+        
+        // Add lines if any
+        for (const line of payload.lines) {
+          if (UUID_REGEX.test(line.productId)) {
+            await apiClient.post(`/quotations/${createdQuote.id}/lines`, {
+              product_id: line.productId,
+              quantity: line.quantity,
+              unit_price: line.unitPrice,
+              discount_percent: line.discountPercentage,
+              line_total: (line.quantity * line.unitPrice) * (1 - line.discountPercentage / 100),
+            }).catch(() => {});
+          }
+        }
+
+        const adapted = adaptServerQuote({
+          ...createdQuote,
+          subtotal,
+          discount_total: discountTotal,
+          tax_total: taxTotal,
+          total,
+        });
+        try {
+          mockDb.createQuote(payload, salespersonId, salespersonName);
+        } catch (_) {}
+        return formatSuccessResponse(adapted, undefined, 'Quote created in live database!');
+      }
+    } catch (err) {
+      console.debug('Live createQuote note, using memory store:', err);
     }
 
     await delay(250);
-    const quote = mockDb.createQuote(payload, salespersonId, salespersonName);
-    return formatSuccessResponse(quote, undefined, 'Quote created successfully!');
+    try {
+      const quote = mockDb.createQuote(payload, salespersonId, salespersonName);
+      return formatSuccessResponse(quote, undefined, 'Quote created successfully!');
+    } catch (err: any) {
+      return formatErrorResponse(err?.message || 'Failed to create quote');
+    }
   },
 
   submitQuote: async (quoteId: string): Promise<ApiResponse<Quote>> => {

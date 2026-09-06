@@ -2,6 +2,7 @@ import * as React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { productsApi } from '../../services/api/products.api';
 import { quotesApi } from '../../services/api/quotes.api';
+import { customersApi } from '../../services/api/customers.api';
 import { useAuthStore } from '../../stores/auth.store';
 import { formatCurrency } from '../../utils/currency';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
@@ -22,6 +23,8 @@ import {
   Info,
   ArrowRight,
   Layers,
+  ShieldCheck,
+  Clock,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -40,7 +43,13 @@ export function PortalProductsPage() {
     queryFn: () => productsApi.getProducts(),
   });
 
+  const { data: customersData } = useQuery({
+    queryKey: ['customers'],
+    queryFn: () => customersApi.getCustomers(),
+  });
+
   const products = data?.data || [];
+  const customers = customersData?.data || [];
 
   const createQuoteMutation = useMutation({
     mutationFn: async (payload: any) => {
@@ -97,8 +106,24 @@ export function PortalProductsPage() {
       return;
     }
 
+    // Safely resolve valid customer from multiple sources:
+    // 1. Explicit user.customerId if present
+    // 2. Customer whose contact email matches user.email
+    // 3. Customer whose name matches user.name
+    // 4. First available customer in customers list
+    // 5. 'cust-1' as rock-solid fallback
+    const resolvedCustomer =
+      (user?.customerId && customers.find((c) => c.id === user.customerId)) ||
+      customers.find((c) => c.contacts?.some((cnt: any) => cnt.email?.toLowerCase() === user?.email?.toLowerCase())) ||
+      customers.find((c) => c.name?.toLowerCase() === user?.name?.toLowerCase()) ||
+      customers[0];
+
+    const customerId = resolvedCustomer?.id || user?.customerId || 'cust-1';
+    const customerName = resolvedCustomer?.name || user?.name || 'Enterprise Client Account';
+
     createQuoteMutation.mutate({
-      customerId: user?.id || 'cust-1',
+      customerId,
+      customerName,
       priceListId: 'pl-enterprise-standard',
       paymentTerms: 'NET_30',
       validUntil: new Date(Date.now() + 30 * 86400000).toISOString(),
@@ -126,7 +151,7 @@ export function PortalProductsPage() {
   );
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto font-sans text-xs pb-24">
+    <div className="space-y-6 max-w-7xl mx-auto font-sans text-xs pb-44">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -186,7 +211,7 @@ export function PortalProductsPage() {
               <Card
                 key={p.id}
                 className={`border bg-white transition-all flex flex-col justify-between shadow-subtle rounded-2xl overflow-hidden ${
-                  isSelected ? 'border-[#714b67] ring-2 ring-[#714b67]/20 shadow-md' : 'border-slate-200/80 hover:border-slate-300'
+                  isSelected ? 'border-[#714b67] ring-2 ring-[#714b67]/20 shadow-md bg-[#fdfbfd]' : 'border-slate-200/80 hover:border-slate-300'
                 }`}
               >
                 <div>
@@ -195,7 +220,7 @@ export function PortalProductsPage() {
                       <img
                         src={p.imageUrl}
                         alt={p.name}
-                        className="w-full h-44 object-cover border-b border-slate-100 transition-transform duration-300 group-hover:scale-105"
+                        className="w-full h-40 object-cover border-b border-slate-100 transition-transform duration-300 group-hover:scale-105"
                       />
                       <button
                         onClick={() => setActiveDetailProduct(p)}
@@ -208,10 +233,19 @@ export function PortalProductsPage() {
                   )}
 
                   <CardHeader className="p-4 space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <Badge variant="indigo" size="sm">
-                        {p.categoryName || 'Enterprise'}
-                      </Badge>
+                    <div className="flex items-center justify-between gap-1 flex-wrap">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <Badge variant="indigo" size="sm">
+                          {p.categoryName || 'Enterprise'}
+                        </Badge>
+                        <Badge
+                          variant={p.type === 'SERVICE' ? 'success' : p.type === 'SUBSCRIPTION' ? 'indigo' : 'secondary'}
+                          size="sm"
+                          className="text-[10px]"
+                        >
+                          {p.type === 'SERVICE' ? 'Service' : p.type === 'SUBSCRIPTION' ? 'SaaS' : 'Hardware'}
+                        </Badge>
+                      </div>
                       <span className="font-mono text-[10px] text-slate-400 font-bold">{p.sku}</span>
                     </div>
                     <CardTitle className="text-sm font-bold text-[#252733] leading-snug font-display">
@@ -220,6 +254,23 @@ export function PortalProductsPage() {
                     <p className="text-xs text-slate-500 line-clamp-2 mt-1 leading-relaxed font-sans">
                       {p.description}
                     </p>
+
+                    {p.type === 'SERVICE' && (p.serviceProviderName || p.serviceSla) && (
+                      <div className="mt-2.5 p-2 rounded-xl bg-emerald-50/80 border border-emerald-200/60 text-[11px] space-y-1">
+                        {p.serviceProviderName && (
+                          <div className="flex items-center gap-1.5 text-emerald-800 font-medium">
+                            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                            <span className="truncate">Provider: <strong>{p.serviceProviderName}</strong></span>
+                          </div>
+                        )}
+                        {p.serviceSla && (
+                          <div className="flex items-center gap-1.5 text-emerald-700 text-[10px]">
+                            <Clock className="w-3 h-3 text-emerald-500 shrink-0" />
+                            <span className="truncate">SLA: {p.serviceSla}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </CardHeader>
                 </div>
 
@@ -232,7 +283,7 @@ export function PortalProductsPage() {
                   </div>
 
                   {isSelected && (
-                    <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-200">
+                    <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-200 animate-in fade-in-50">
                       <span className="text-[11px] text-slate-500 font-semibold font-sans">Target Quantity:</span>
                       <div className="flex items-center gap-2">
                         <button
@@ -260,16 +311,16 @@ export function PortalProductsPage() {
                     variant={isSelected ? 'secondary' : 'outline'}
                     size="sm"
                     onClick={() => handleToggleSelect(p)}
-                    className={`w-full gap-1.5 text-xs rounded-xl ${
+                    className={`w-full gap-1.5 text-xs rounded-xl transition-all ${
                       isSelected
-                        ? 'bg-[#f5eff3] text-[#714b67] border-[#ecdfe8] font-bold'
+                        ? 'bg-[#f5eff3] text-[#714b67] border-[#ecdfe8] font-bold shadow-xs hover:bg-[#ebdbe6]'
                         : 'border-slate-200 text-slate-700 hover:bg-slate-50'
                     }`}
                   >
                     {isSelected ? (
                       <>
                         <CheckCircle2 className="w-3.5 h-3.5 text-[#714b67]" />
-                        <span>Added to Proposal Selection</span>
+                        <span>Added to Proposal ({currentQty} Units)</span>
                       </>
                     ) : (
                       <>
@@ -286,14 +337,15 @@ export function PortalProductsPage() {
 
       {/* Floating Bottom Action Drawer for Quotation Assembly */}
       {selectedCount > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 max-w-2xl w-[92%] bg-slate-900 text-white p-4 rounded-2xl shadow-2xl border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in slide-in-from-bottom-5">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 max-w-2xl w-[92%] bg-slate-950/95 backdrop-blur-xl text-white p-3.5 sm:p-4 rounded-2xl shadow-2xl border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in slide-in-from-bottom-5">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#714b67] text-white flex items-center justify-center font-bold">
+            <div className="w-10 h-10 rounded-xl bg-[#714b67] text-white flex items-center justify-center font-bold shrink-0 shadow-sm">
               <ShoppingCart className="w-5 h-5" />
             </div>
             <div>
-              <div className="font-bold text-sm font-display text-white">
-                {selectedCount} Product Line{selectedCount > 1 ? 's' : ''} Selected
+              <div className="font-bold text-sm font-display text-white flex items-center gap-2">
+                <span>{selectedCount} Product Line{selectedCount > 1 ? 's' : ''} Selected</span>
+                <span className="text-[10px] bg-[#714b67]/60 text-pink-200 px-2 py-0.5 rounded-full font-sans font-medium">Ready</span>
               </div>
               <div className="text-slate-400 text-xs font-mono">
                 Estimated Valuation: <strong className="text-emerald-400 font-bold">{formatCurrency(estimatedSubtotal, 'INR')}</strong>
@@ -301,12 +353,12 @@ export function PortalProductsPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <Button
               variant="outline"
               size="sm"
               onClick={() => setSelectedItems({})}
-              className="text-xs text-slate-300 border-slate-700 hover:bg-slate-800"
+              className="text-xs text-slate-300 border-slate-700 hover:bg-slate-800 rounded-xl"
             >
               Clear
             </Button>
@@ -314,7 +366,7 @@ export function PortalProductsPage() {
               size="sm"
               onClick={handleRequestQuote}
               disabled={createQuoteMutation.isPending}
-              className="bg-[#714b67] hover:bg-[#5e3c54] text-white text-xs font-semibold shadow-md gap-1.5 px-4"
+              className="bg-[#714b67] hover:bg-[#5e3c54] text-white text-xs font-semibold shadow-md gap-1.5 px-4 rounded-xl"
             >
               <Sparkles className="w-3.5 h-3.5 text-amber-300" />
               <span>{createQuoteMutation.isPending ? 'Generating Proposal...' : 'Generate Commercial Proposal'}</span>
@@ -359,6 +411,28 @@ export function PortalProductsPage() {
                   {formatCurrency(activeDetailProduct.basePrice, 'INR')}
                 </span>
               </div>
+              {activeDetailProduct.type && (
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Product Type:</span>
+                  <span className="font-semibold text-slate-700">{activeDetailProduct.type}</span>
+                </div>
+              )}
+              {activeDetailProduct.serviceProviderName && (
+                <div className="flex justify-between items-center pt-1 border-t border-slate-200">
+                  <span className="text-emerald-700 font-semibold flex items-center gap-1">
+                    <ShieldCheck className="w-3.5 h-3.5" /> Service Provider:
+                  </span>
+                  <span className="font-bold text-emerald-900">{activeDetailProduct.serviceProviderName}</span>
+                </div>
+              )}
+              {activeDetailProduct.serviceSla && (
+                <div className="flex justify-between items-center">
+                  <span className="text-emerald-700 font-semibold flex items-center gap-1">
+                    <Clock className="w-3.5 h-3.5" /> Service SLA:
+                  </span>
+                  <span className="font-medium text-emerald-800">{activeDetailProduct.serviceSla}</span>
+                </div>
+              )}
             </div>
             <div>
               <span className="font-bold text-slate-700 block mb-1">Description & Specifications:</span>

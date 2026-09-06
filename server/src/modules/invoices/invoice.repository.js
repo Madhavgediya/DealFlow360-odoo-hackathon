@@ -1,4 +1,5 @@
 const db = require('../../config/database');
+const { resolveValidCompanyId } = require('../../utils/companyResolver');
 
 const INVOICE_FIELDS = `
   id, company_id, order_id, customer_id, status, subtotal, tax_total, total, due_date, created_at, updated_at
@@ -10,6 +11,7 @@ const INVOICE_LINE_FIELDS = `
 
 const createInvoiceTransaction = async (data) => {
   const { company_id, order_id, customer_id, subtotal, tax_total, total, lines } = data;
+  const resolvedCompanyId = await resolveValidCompanyId(company_id);
   const client = await db.pool.connect();
   
   try {
@@ -21,7 +23,7 @@ const createInvoiceTransaction = async (data) => {
       VALUES ($1, $2, $3, 'DRAFT', $4, $5, $6)
       RETURNING ${INVOICE_FIELDS}
     `;
-    const invRes = await client.query(invQuery, [company_id, order_id, customer_id, subtotal, tax_total, total]);
+    const invRes = await client.query(invQuery, [resolvedCompanyId, order_id, customer_id, subtotal, tax_total, total]);
     const invoice = invRes.rows[0];
     
     // 2. Create lines
@@ -34,7 +36,7 @@ const createInvoiceTransaction = async (data) => {
     invoice.lines = [];
     for (const line of lines) {
       const lineRes = await client.query(lineQuery, [
-        company_id, 
+        resolvedCompanyId, 
         invoice.id, 
         line.product_id, 
         line.quantity, 
@@ -55,9 +57,16 @@ const createInvoiceTransaction = async (data) => {
 };
 
 const getInvoices = async (company_id, filters = {}) => {
-  const conditions = ['company_id = $1'];
-  const values = [company_id];
-  let i = 2;
+  const resolvedCompanyId = await resolveValidCompanyId(company_id);
+  const conditions = [];
+  const values = [];
+  let i = 1;
+
+  if (resolvedCompanyId) {
+    conditions.push(`company_id = $${i}`);
+    values.push(resolvedCompanyId);
+    i++;
+  }
 
   if (filters.customer_id) {
     conditions.push(`customer_id = $${i}`);

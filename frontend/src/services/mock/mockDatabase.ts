@@ -130,6 +130,24 @@ class MockDatabase {
     return product;
   }
 
+  public updateProduct(id: string, patch: Partial<Product>): Product | null {
+    const prod = this.getProductById(id);
+    if (prod) {
+      Object.assign(prod, patch, { updatedAt: new Date().toISOString() });
+      return prod;
+    }
+    return null;
+  }
+
+  public deleteProduct(id: string): boolean {
+    const idx = this.products.findIndex(p => p.id === id);
+    if (idx !== -1) {
+      this.products.splice(idx, 1);
+      return true;
+    }
+    return false;
+  }
+
   public addWarehouse(wh: Warehouse): Warehouse {
     this.warehouses.unshift(wh);
     return wh;
@@ -290,8 +308,38 @@ class MockDatabase {
   }
 
   public createQuote(payload: CreateQuotePayload, salespersonId: string = 'usr-rep', salespersonName: string = 'Ananya Sharma'): Quote {
-    const customer = this.getCustomerById(payload.customerId);
-    if (!customer) throw new Error('Customer not found');
+    let customer = this.getCustomerById(payload.customerId);
+    if (!customer) {
+      customer =
+        this.customers.find((c) => c.name.toLowerCase() === (payload as any).customerName?.toLowerCase()) ||
+        this.customers.find((c) => c.id === 'cust-1') ||
+        this.customers[0];
+    }
+    if (!customer) {
+      customer = {
+        id: payload.customerId || 'cust-1',
+        name: (payload as any).customerName || 'Enterprise Client Account',
+        code: 'CUST-ENT-001',
+        companyId: 'comp-1',
+        industry: 'Technology & Telecommunications',
+        tier: 'GOLD',
+        priceListId: 'pl-enterprise-standard',
+        priceListName: 'Standard Commercial INR Price List',
+        currency: 'INR',
+        paymentTerms: 'NET_30',
+        creditLimit: 10000000,
+        creditUsed: 0,
+        status: 'ACTIVE',
+        contacts: [],
+        billingAddress: { street: 'Main Tech Park', city: 'Mumbai', state: 'MH', country: 'India', postalCode: '400001' },
+        shippingAddress: { street: 'Main Tech Park', city: 'Mumbai', state: 'MH', country: 'India', postalCode: '400001' },
+        totalRevenue: 0,
+        openDealsCount: 1,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      this.customers.push(customer);
+    }
 
     const quoteId = `q-${Math.floor(1000 + Math.random() * 9000)}`;
     const quoteNumber = `Q-${Math.floor(1000 + Math.random() * 9000)}`;
@@ -302,16 +350,20 @@ class MockDatabase {
     let totalTax = 0;
 
     const lines: QuoteLineItem[] = payload.lines.map((l, index) => {
-      const product = this.getProductById(l.productId);
-      if (!product) throw new Error(`Product ${l.productId} not found`);
+      const pName = (l as any).productName;
+      let product = this.getProductById(l.productId);
+      if (!product) {
+        product = (pName ? this.products.find((p) => p.name === pName) : undefined) || this.products[0];
+      }
 
-      const unitPrice = l.unitPrice || product.basePrice;
-      const unitCost = product.costPrice || unitPrice * 0.75;
+      const unitPrice = l.unitPrice || (product ? product.basePrice : 25000);
+      const unitCost = (product && product.costPrice) || unitPrice * 0.75;
       const lineSubtotal = unitPrice * l.quantity;
       const discountPercentage = l.discountPercentage || 0;
       const discountAmount = (lineSubtotal * discountPercentage) / 100;
       const taxableAmount = lineSubtotal - discountAmount;
-      const taxAmount = (taxableAmount * product.taxRate) / 100;
+      const taxRate = product ? product.taxRate : 18;
+      const taxAmount = (taxableAmount * taxRate) / 100;
       const lineTotal = taxableAmount + taxAmount;
       const lineTotalCost = unitCost * l.quantity;
       const lineMarginAmount = taxableAmount - lineTotalCost;
@@ -324,16 +376,16 @@ class MockDatabase {
 
       return {
         id: `line-${index + 1}`,
-        productId: product.id,
-        productName: product.name,
-        productSku: product.sku,
-        categoryId: product.categoryId,
-        categoryName: product.categoryName,
+        productId: product ? product.id : l.productId,
+        productName: product ? product.name : (pName || 'Catalog Item'),
+        productSku: product ? product.sku : `SKU-${index + 1000}`,
+        categoryId: product ? product.categoryId : 'cat-hardware',
+        categoryName: product ? product.categoryName : 'Hardware',
         quantity: l.quantity,
         unitPrice,
         discountPercentage,
         discountAmount,
-        taxRate: product.taxRate,
+        taxRate,
         taxAmount,
         lineSubtotal,
         lineTotal,
@@ -343,10 +395,10 @@ class MockDatabase {
         lineMarginPercentage,
         warehouseId: l.warehouseId || 'wh-surat',
         warehouseName: 'Surat Central Logistics Hub',
-        isRecurring: product.isRecurring,
-        billingPeriod: product.subscriptionBillingPeriod,
-        stockAvailable: product.totalStockAvailable || 10,
-        stockShortage: Math.max(0, l.quantity - (product.totalStockAvailable || 10)),
+        isRecurring: product ? product.isRecurring : false,
+        billingPeriod: product ? product.subscriptionBillingPeriod : undefined,
+        stockAvailable: (product && product.totalStockAvailable) || 10,
+        stockShortage: Math.max(0, l.quantity - ((product && product.totalStockAvailable) || 10)),
       };
     });
 
